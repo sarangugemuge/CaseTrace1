@@ -8,7 +8,8 @@ import os
 # Add root directory to sys.path
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.app.main import app, seed_initial_data
+from backend.app.main import app
+from backend.app.db.seed import seed_database
 from backend.app.db.database import Base, get_db
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_casetrace.db"
@@ -21,7 +22,7 @@ def setup_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
-    seed_initial_data(db)
+    seed_database(db)
     db.close()
     yield
     Base.metadata.drop_all(bind=engine)

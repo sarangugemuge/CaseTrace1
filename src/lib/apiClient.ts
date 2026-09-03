@@ -8,15 +8,21 @@ import { auditService } from '../services/auditService';
 import { verificationService } from '../services/verificationService';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const API_MODE = process.env.NEXT_PUBLIC_API_MODE || 'real'; // 'real' or 'mock'
 
 async function fetchWithFallback<T>(
   url: string,
   options: RequestInit = {},
   mockFallback: () => T
 ): Promise<T> {
+  // If explicitly configured for mock mode, skip network request
+  if (API_MODE === 'mock') {
+    return mockFallback();
+  }
+
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500); // Fast 1.5s timeout for fallback
+    const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s timeout for seamless dev UX
 
     const currentUser = authService.getCurrentUser();
     const headers: Record<string, string> = {
@@ -35,7 +41,7 @@ async function fetchWithFallback<T>(
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      console.warn(`API ${url} returned status ${res.status}. Falling back to mock service layer.`);
+      console.warn(`API ${url} returned status ${res.status}. Falling back to mock layer.`);
       return mockFallback();
     }
 
@@ -47,7 +53,11 @@ async function fetchWithFallback<T>(
 }
 
 export const apiClient = {
-  async getHealth(): Promise<{ status: string; service: string }> {
+  getApiMode(): string {
+    return API_MODE;
+  },
+
+  async getHealth(): Promise<{ status: string; service: string; database?: any }> {
     return fetchWithFallback(
       '/api/health',
       {},

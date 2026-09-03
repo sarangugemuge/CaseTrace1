@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from backend.app.db.database import get_db
-from backend.app.db.models.case import CaseModel
 from backend.app.db.models.user import UserModel
 from backend.app.schemas.case import CaseResponse, CaseCreate, CaseUpdate
 from backend.app.dependencies.auth import get_current_user
-from backend.app.services.access_control import evaluate_access
+from backend.app.services.case_service import CaseService
+from backend.app.services.audit_service import AuditService
 
 router = APIRouter()
 
@@ -15,24 +15,9 @@ def list_cases(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    all_cases = db.query(CaseModel).all()
-    
-    # Filter cases by access policy
-    authorized_cases = []
-    user_assigned_cases = current_user.assigned_case_ids or []
-    
-    for c in all_cases:
-        decision = evaluate_access(
-            user_role=current_user.role,
-            user_assigned_cases=user_assigned_cases,
-            user_id=current_user.id,
-            case_id=c.case_id,
-            case_assigned_users=c.assigned_users or []
-        )
-        if decision["allowed"]:
-            authorized_cases.append(c)
-            
-    return [CaseResponse.model_validate(c) for c in authorized_cases]
+    service = CaseService(db)
+    cases = service.list_cases_for_user(current_user)
+    return [CaseResponse.model_validate(c) for c in cases]
 
 @router.get("/cases/{case_id}", response_model=CaseResponse)
 def get_case_by_id(
@@ -40,23 +25,24 @@ def get_case_by_id(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    c = db.query(CaseModel).filter(CaseModel.case_id == case_id).first()
-    if not c:
+    service = CaseService(db)
+    audit_svc = AuditService(db)
+    
+    case_obj, decision = service.get_case_by_id(case_id, current_user)
+    
+    # Audit & access decision logging
+    audit_svc.record_access_decision(
+        user=current_user, case_id=case_id, document_id=None,
+        action="VIEW_CASE", purpose="CASE_PASSPORT_VIEW", decision=decision
+    )
+
+    if not case_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Case {case_id} not found.")
 
-    user_assigned_cases = current_user.assigned_case_ids or []
-    decision = evaluate_access(
-        user_role=current_user.role,
-        user_assigned_cases=user_assigned_cases,
-        user_id=current_user.id,
-        case_id=c.case_id,
-        case_assigned_users=c.assigned_users or []
-    )
-    
     if not decision["allowed"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
 
-    return CaseResponse.model_validate(c)
+    return CaseResponse.model_validate(case_obj)
 
 @router.post("/cases", response_model=CaseResponse, status_code=status.HTTP_201_CREATED)
 def create_case(
@@ -70,10 +56,8 @@ def create_case(
             detail="Only Senior Officers and Admins are authorized to create new cases."
         )
 
-    db_case = CaseModel(**case_in.model_dump())
-    db.add(db_case)
-    db.commit()
-    db.refresh(db_case)
+    service = CaseService(db)
+    db_case = service.create_case(case_in, current_user)
     return CaseResponse.model_validate(db_case)
 
 @router.put("/cases/{case_id}", response_model=CaseResponse)
@@ -83,14 +67,8 @@ def update_case(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    c = db.query(CaseModel).filter(CaseModel.case_id == case_id).first()
-    if not c:
+    service = CaseService(db)
+    updated = service.update_case(case_id, case_update)
+    if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Case {case_id} not found.")
-
-    update_data = case_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(c, field, value)
-
-    db.commit()
-    db.refresh(c)
-    return CaseResponse.model_validate(c)
+    return CaseResponse.model_validate(updated)
