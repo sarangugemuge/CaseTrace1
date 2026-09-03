@@ -29,23 +29,23 @@ export const ChainOfCustody: React.FC<{ caseId: string }> = ({ caseId }) => {
   ];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg my-6">
-      <h3 className="text-sm font-mono font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-        <Clock className="w-4 h-4 text-purple-400" />
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-card my-6 transition-colors">
+      <h3 className="text-sm font-mono font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+        <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
         Forensic Chain of Custody & Immutability Audit Trail ({caseId})
       </h3>
-      <div className="relative border-l border-purple-900/60 ml-4 space-y-6">
+      <div className="relative border-l border-purple-300 dark:border-purple-900/60 ml-4 space-y-6">
         {events.map((evt, idx) => (
           <div key={idx} className="ml-6 relative">
-            <span className="absolute -left-[31px] top-0 w-3 h-3 bg-purple-500 rounded-full border-2 border-slate-900 ring-4 ring-purple-950" />
-            <div className="bg-navy-900 border border-slate-800 rounded-lg p-3 text-xs font-mono">
-              <div className="flex justify-between items-center text-slate-400 mb-1">
-                <span className="text-purple-300 font-semibold">{evt.actor} ({evt.role})</span>
-                <span className="text-[10px] text-slate-500">{evt.time}</span>
+            <span className="absolute -left-[31px] top-0 w-3 h-3 bg-purple-600 dark:bg-purple-500 rounded-full border-2 border-white dark:border-slate-900 ring-4 ring-purple-100 dark:ring-purple-950" />
+            <div className="bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-xs font-mono">
+              <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 mb-1">
+                <span className="text-purple-700 dark:text-purple-300 font-semibold">{evt.actor} ({evt.role})</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">{evt.time}</span>
               </div>
-              <div className="text-slate-200 mb-2">{evt.action}</div>
-              <div className="text-[10px] bg-slate-950 p-1.5 rounded border border-slate-800 text-slate-400 truncate flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-400 inline shrink-0" />
+              <div className="text-slate-800 dark:text-slate-200 mb-2">{evt.action}</div>
+              <div className="text-[10px] bg-slate-100 dark:bg-slate-950 p-1.5 rounded border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 truncate flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400 inline shrink-0" />
                 HASH: {evt.hash}
               </div>
             </div>

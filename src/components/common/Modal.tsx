@@ -14,15 +14,16 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        <div className="bg-navy-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-sm font-mono font-bold text-white uppercase tracking-wider">{title}</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs p-4">
+      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100 transition-colors">
+        <div className="bg-slate-100 dark:bg-navy-950 px-6 py-4 border-b border-slate-200 dark:border-navy-800 flex items-center justify-between">
+          <h3 className="text-xs font-mono font-bold text-slate-900 dark:text-white uppercase tracking-wider">{title}</h3>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-md transition-colors"
+            aria-label="Close Modal"
+            className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-md transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
         <div className="p-6">{children}</div>

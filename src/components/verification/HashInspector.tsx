@@ -2,94 +2,97 @@
 
 import React, { useState } from 'react';
 import { verificationService } from '../../services/verificationService';
-import { ShieldCheck, ShieldAlert, FileText, CheckCircle2, RefreshCw } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, FileCheck, CheckCircle, RefreshCw } from 'lucide-react';
 
 export const HashInspector: React.FC = () => {
-  const [inputText, setInputText] = useState('OFFICIAL_CASE_EVIDENCE_SPEC_2026_DARKLEDGE');
+  const [contentInput, setContentInput] = useState('OFFICIAL_CASE_PAYLOAD_FIR_2026');
   const [targetHash, setTargetHash] = useState('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
-  const [computedHash, setComputedHash] = useState(verificationService.generateHash('OFFICIAL_CASE_EVIDENCE_SPEC_2026_DARKLEDGE'));
+  const [computedHash, setComputedHash] = useState('');
+  const [verificationResult, setVerificationResult] = useState<{ isMatch: boolean; status: string } | null>(null);
 
-  const handleCompute = (val: string) => {
-    setInputText(val);
-    const hash = verificationService.generateHash(val);
-    setComputedHash(hash);
+  const handleComputeHash = () => {
+    const computed = verificationService.generateHash(contentInput);
+    setComputedHash(computed);
+    const match = verificationService.verifyHash(computed, targetHash);
+    setVerificationResult({
+      isMatch: match,
+      status: match ? 'VERIFIED (BIT-EXACT MATCH)' : 'INTEGRITY MISMATCH (TAMPERED ARTIFACT)',
+    });
   };
 
-  const isMatch = verificationService.verifyHash(computedHash, targetHash);
-
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div>
-          <h2 className="text-base font-bold text-white font-mono flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-400" />
-            SHA-256 Cryptographic Hash Inspector & Verification
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Simulate real-time hash verification against blockchain anchor records.
-          </p>
-        </div>
-        <span className="text-[10px] font-mono bg-blue-950 text-blue-400 border border-blue-800 px-2 py-1 rounded">
-          PROTOTYPE HASH ENGINE
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-card transition-colors space-y-5">
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-3 flex items-center justify-between">
+        <h3 className="text-sm font-mono font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+          <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          Interactive Cryptographic SHA-256 Inspector & Validator
+        </h3>
+        <span className="text-[10px] font-mono bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded font-bold">
+          BIT-LEVEL ACCURACY
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-4 font-mono text-xs">
         <div>
-          <label className="block text-xs font-mono text-slate-300 uppercase tracking-wider mb-2">
-            Input Content String / File Artifact Stream:
-          </label>
+          <label className="block text-slate-700 dark:text-slate-300 mb-1">Evidence Payload / Raw Document Content:</label>
           <textarea
-            value={inputText}
-            onChange={(e) => handleCompute(e.target.value)}
-            rows={4}
-            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 font-mono focus:border-blue-500 focus:outline-hidden"
+            value={contentInput}
+            onChange={(e) => setContentInput(e.target.value)}
+            rows={3}
+            className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-hidden"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-mono text-slate-300 uppercase tracking-wider mb-2">
-            Expected Ledger Anchor SHA-256 Hash:
-          </label>
+          <label className="block text-slate-700 dark:text-slate-300 mb-1">Expected Blockchain Ledger SHA-256 Digest:</label>
           <input
             type="text"
             value={targetHash}
             onChange={(e) => setTargetHash(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 font-mono focus:border-blue-500 focus:outline-hidden mb-3"
+            className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-slate-200 font-bold focus:border-blue-500 focus:outline-hidden"
           />
-          <button
-            onClick={() => setTargetHash(computedHash)}
-            className="text-[11px] font-mono text-blue-400 hover:underline flex items-center gap-1"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Set expected hash to current computed hash
-          </button>
         </div>
-      </div>
 
-      {/* Computed Result Card */}
-      <div className="bg-navy-950 border border-slate-800 rounded-lg p-4 font-mono text-xs space-y-3">
-        <div>
-          <span className="text-slate-400">COMPUTED SHA-256 DIGEST:</span>
-          <div className="text-blue-300 bg-slate-950 p-2 rounded border border-slate-800 break-all mt-1">
-            {computedHash}
+        <button
+          onClick={handleComputeHash}
+          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg flex items-center gap-2 shadow-md transition-all"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Compute SHA-256 & Execute Bit-Level Verification
+        </button>
+
+        {computedHash && (
+          <div className="bg-slate-50 dark:bg-navy-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+            <div>
+              <span className="text-slate-500 block text-[10px]">COMPUTED SHA-256:</span>
+              <span className="text-blue-600 dark:text-blue-400 font-bold break-all">{computedHash}</span>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-          <span className="text-slate-400">INTEGRITY COMPARISON RESULT:</span>
-          {isMatch ? (
-            <div className="flex items-center gap-2 text-emerald-400 font-bold bg-emerald-950/80 border border-emerald-800 px-3 py-1 rounded">
-              <CheckCircle2 className="w-4 h-4" />
-              INTEGRITY VERIFIED (BIT-EXACT MATCH)
+        {verificationResult && (
+          <div
+            className={`p-4 rounded-xl border flex items-center gap-3 font-bold ${
+              verificationResult.isMatch
+                ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300'
+                : 'bg-rose-50 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-300 animate-pulse'
+            }`}
+          >
+            {verificationResult.isMatch ? (
+              <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-6 h-6 text-rose-600 dark:text-rose-400 shrink-0" />
+            )}
+            <div>
+              <div className="text-sm">{verificationResult.status}</div>
+              <div className="text-[11px] font-normal opacity-85 mt-0.5">
+                {verificationResult.isMatch
+                  ? 'Cryptographic integrity verified. Document matches ledger anchor bit-for-bit.'
+                  : 'WARNING: Document has been modified or corrupted since initial registration!'}
+              </div>
             </div>
-          ) : (
-            <div className="flex items-center gap-2 text-rose-400 font-bold bg-rose-950/80 border border-rose-800 px-3 py-1 rounded animate-pulse">
-              <ShieldAlert className="w-4 h-4" />
-              HASH MISMATCH (POSSIBLE TAMPERING)
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

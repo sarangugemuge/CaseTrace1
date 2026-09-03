@@ -5,159 +5,112 @@ import Link from 'next/link';
 import { useAuth } from '../../../context/AuthContext';
 import { caseService } from '../../../services/caseService';
 import { SensitivityBadge } from '../../../components/common/Badge';
-import { FolderLock, Search, Filter, ArrowRight } from 'lucide-react';
+import { FolderLock, Search, Filter, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
-export default function CasesDirectoryPage() {
+export default function CasesPage() {
   const { currentUser } = useAuth();
-  const allCases = caseService.getCasesForUser(currentUser);
+  const [search, setSearch] = useState('');
+  const [stageFilter, setStageFilter] = useState('ALL');
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
-  const [selectedPriority, setSelectedPriority] = useState('ALL');
-  const [selectedClassification, setSelectedClassification] = useState('ALL');
+  let cases = caseService.getCasesForUser(currentUser);
 
-  const filteredCases = allCases.filter((c) => {
-    const matchesSearch =
-      c.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.leadInvestigator.toLowerCase().includes(searchTerm.toLowerCase());
+  if (stageFilter !== 'ALL') {
+    cases = cases.filter((c) => c.caseStage === stageFilter);
+  }
 
-    const matchesStatus = selectedStatus === 'ALL' || c.status === selectedStatus;
-    const matchesPriority = selectedPriority === 'ALL' || c.priority === selectedPriority;
-    const matchesClassification = selectedClassification === 'ALL' || c.classification === selectedClassification;
-
-    return matchesSearch && matchesStatus && matchesPriority && matchesClassification;
-  });
+  if (search) {
+    const q = search.toLowerCase();
+    cases = cases.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        c.caseNumber.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q)
+    );
+  }
 
   return (
-    <div className="space-y-6 font-mono text-xs">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-navy-900 border border-slate-800 rounded-xl p-6 shadow-lg flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-card flex flex-wrap items-center justify-between gap-4 transition-colors">
         <div>
-          <div className="flex items-center gap-2 text-slate-400 mb-1">
-            <FolderLock className="w-4 h-4 text-blue-400" />
-            <span>DIGITAL CASE PASSPORT DIRECTORY</span>
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
+            <span>ROLE CLEARANCE:</span>
+            <span className="text-emerald-700 dark:text-emerald-400 uppercase font-bold">{currentUser.role}</span>
           </div>
-          <h1 className="text-xl font-bold text-white tracking-tight font-sans">
-            Authorized Digital Case Directory
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            Digital Case Passport Directory
           </h1>
-          <p className="text-slate-400 mt-1">
-            Showing cases authorized for role clearance:{' '}
-            <span className="text-emerald-400 font-bold uppercase">{currentUser.role}</span>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Browse and inspect active legal and investigation passports authorized for your security role.
           </p>
         </div>
-      </div>
 
-      {/* Filter Controls */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search case #, title, investigator, department..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-transparent text-slate-200 focus:outline-hidden w-full"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-400">STATUS:</span>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
-            >
-              <option value="ALL">ALL STATUSES</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="IN_COURT">IN_COURT</option>
-              <option value="CLOSED">CLOSED</option>
-            </select>
+        {/* Filter Bar */}
+        <div className="flex items-center gap-3 font-mono text-xs">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search case # or title..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-hidden"
+            />
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">PRIORITY:</span>
-            <select
-              value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
-              className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
-            >
-              <option value="ALL">ALL PRIORITIES</option>
-              <option value="CRITICAL">CRITICAL</option>
-              <option value="HIGH">HIGH</option>
-              <option value="MEDIUM">MEDIUM</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">CLASSIFICATION:</span>
-            <select
-              value={selectedClassification}
-              onChange={(e) => setSelectedClassification(e.target.value)}
-              className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
-            >
-              <option value="ALL">ALL CLASSIFICATIONS</option>
-              <option value="CONFIDENTIAL">CONFIDENTIAL</option>
-              <option value="TOP_SECRET">TOP_SECRET</option>
-            </select>
-          </div>
+          <select
+            value={stageFilter}
+            onChange={(e) => setStageFilter(e.target.value)}
+            className="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-hidden"
+          >
+            <option value="ALL">All Stages</option>
+            <option value="FORENSIC_ANALYSIS">Forensic Analysis</option>
+            <option value="EVIDENCE_COLLECTION">Evidence Collection</option>
+            <option value="TRIALS_ONGOING">Trials Ongoing</option>
+          </select>
         </div>
       </div>
 
-      {/* Directory Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-navy-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
-              <tr>
-                <th className="px-6 py-3">Case ID & Title</th>
-                <th className="px-6 py-3">Department</th>
-                <th className="px-6 py-3">Status / Priority</th>
-                <th className="px-6 py-3">Classification</th>
-                <th className="px-6 py-3">Lead Investigator</th>
-                <th className="px-6 py-3">Last Updated</th>
-                <th className="px-6 py-3">Records</th>
-                <th className="px-6 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
-              {filteredCases.map((c) => (
-                <tr key={c.caseId} className="hover:bg-slate-850/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-blue-400">{c.caseNumber}</div>
-                    <div className="font-semibold text-white font-sans mt-0.5">{c.title}</div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-400">{c.department}</td>
-                  <td className="px-6 py-4">
-                    <span className="text-emerald-400 font-bold">{c.status}</span>
-                    <div className="text-[10px] text-slate-500">{c.priority} PRIORITY</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <SensitivityBadge sensitivity={c.classification as any} />
-                  </td>
-                  <td className="px-6 py-4 text-slate-300">{c.leadInvestigator}</td>
-                  <td className="px-6 py-4 text-slate-400 text-[11px]">
-                    {new Date(c.updatedAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 font-bold text-blue-300">
-                    {c.documentCount} Docs • {c.evidenceCount} Evd
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <Link
-                      href={`/dashboard/cases/${c.caseId}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 rounded font-semibold transition-all"
-                    >
-                      OPEN CASE PASSPORT <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Case Passports Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {cases.map((c) => (
+          <div
+            key={c.caseId}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-card flex flex-col justify-between space-y-4 hover:border-slate-400 dark:hover:border-slate-700 transition-all"
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{c.caseNumber}</span>
+                <SensitivityBadge sensitivity={c.classification as any} />
+              </div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white line-clamp-1">{c.title}</h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 line-clamp-3 leading-relaxed">{c.description}</p>
+            </div>
+
+            <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs font-mono">
+              <div className="text-slate-500 dark:text-slate-400 flex justify-between">
+                <span>LEAD:</span>
+                <span className="text-slate-900 dark:text-slate-200 font-semibold">{c.leadInvestigator}</span>
+              </div>
+              <div className="text-slate-500 dark:text-slate-400 flex justify-between">
+                <span>STAGE:</span>
+                <span className="text-blue-600 dark:text-blue-400 font-bold">{c.caseStage}</span>
+              </div>
+              <div className="text-slate-500 dark:text-slate-400 flex justify-between">
+                <span>DOCUMENTS:</span>
+                <span className="text-slate-900 dark:text-white font-bold">{c.documentCount} Registered</span>
+              </div>
+
+              <Link
+                href={`/dashboard/cases/${c.caseId}`}
+                className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold rounded-lg flex items-center justify-center gap-2 transition-all shadow-md mt-2"
+              >
+                Inspect Passport View
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

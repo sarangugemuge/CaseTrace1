@@ -147,28 +147,28 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={`Document Passport: ${document.name}`}>
-        <div className="space-y-5 font-mono text-xs text-slate-200">
+        <div className="space-y-5 font-mono text-xs text-slate-800 dark:text-slate-200">
           {/* Metadata Grid */}
-          <div className="bg-navy-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-850">
-              <span className="text-slate-400">CLASSIFICATION:</span>
+          <div className="bg-slate-50 dark:bg-navy-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-850">
+              <span className="text-slate-500 dark:text-slate-400">CLASSIFICATION:</span>
               <SensitivityBadge sensitivity={document.sensitivity} />
             </div>
-            <div className="flex justify-between items-center text-slate-300">
+            <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
               <span className="text-slate-500">CATEGORY / TYPE:</span>
               <span>{document.category} ({document.type})</span>
             </div>
-            <div className="flex justify-between items-center text-slate-300">
+            <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
               <span className="text-slate-500">VERSION:</span>
-              <span className="text-blue-400 font-bold">v{document.version}</span>
+              <span className="text-blue-600 dark:text-blue-400 font-bold">v{document.version}</span>
             </div>
-            <div className="flex justify-between items-center text-slate-300">
+            <div className="flex justify-between items-center text-slate-700 dark:text-slate-300">
               <span className="text-slate-500">UPLOADED BY:</span>
               <span>{document.uploadedBy} ({new Date(document.uploadedAt).toLocaleDateString()})</span>
             </div>
-            <div className="pt-2 border-t border-slate-850">
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-850">
               <span className="text-slate-500 block mb-1">SHA-256 DIGEST:</span>
-              <div className="text-blue-300 text-[11px] bg-slate-950 p-2 rounded border border-slate-800 break-all">
+              <div className="text-blue-700 dark:text-blue-300 text-[11px] bg-slate-100 dark:bg-slate-950 p-2 rounded border border-slate-300 dark:border-slate-800 break-all font-bold">
                 {document.sha256Hash}
               </div>
             </div>
@@ -176,36 +176,36 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
           {/* Action Triggers */}
           <div>
-            <span className="block text-slate-400 font-bold uppercase tracking-wider mb-2">
+            <span className="block text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider mb-2">
               Request Document Action:
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 onClick={() => triggerAction('VIEW')}
-                className="p-2.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 rounded flex flex-col items-center gap-1 transition-all"
+                className="p-2.5 bg-blue-50 dark:bg-blue-600/20 hover:bg-blue-100 dark:hover:bg-blue-600/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-500/40 rounded flex flex-col items-center gap-1 transition-all"
               >
-                <Eye className="w-4 h-4 text-blue-400" />
+                <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>VIEW</span>
               </button>
               <button
                 onClick={() => triggerAction('DOWNLOAD')}
-                className="p-2.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 rounded flex flex-col items-center gap-1 transition-all"
+                className="p-2.5 bg-emerald-50 dark:bg-emerald-600/20 hover:bg-emerald-100 dark:hover:bg-emerald-600/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 rounded flex flex-col items-center gap-1 transition-all"
               >
-                <Download className="w-4 h-4 text-emerald-400" />
+                <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>DOWNLOAD</span>
               </button>
               <button
                 onClick={() => triggerAction('SHARE')}
-                className="p-2.5 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/40 rounded flex flex-col items-center gap-1 transition-all"
+                className="p-2.5 bg-purple-50 dark:bg-purple-600/20 hover:bg-purple-100 dark:hover:bg-purple-600/40 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-500/40 rounded flex flex-col items-center gap-1 transition-all"
               >
-                <Share2 className="w-4 h-4 text-purple-400" />
+                <Share2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <span>SHARE</span>
               </button>
               <button
                 onClick={() => triggerAction('VERIFY')}
-                className="p-2.5 bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 rounded flex flex-col items-center gap-1 transition-all"
+                className="p-2.5 bg-amber-50 dark:bg-amber-600/20 hover:bg-amber-100 dark:hover:bg-amber-600/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 rounded flex flex-col items-center gap-1 transition-all"
               >
-                <FileCheck className="w-4 h-4 text-amber-400" />
+                <FileCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <span>VERIFY</span>
               </button>
             </div>
@@ -216,23 +216,23 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
             <div
               className={`p-4 rounded-xl border ${
                 lastDecision.allowed
-                  ? 'bg-emerald-950/80 border-emerald-800 text-emerald-300'
-                  : 'bg-rose-950/80 border-rose-800 text-rose-300 animate-pulse'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300'
+                  : 'bg-rose-50 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-300 animate-pulse'
               }`}
             >
               <div className="flex items-center justify-between font-bold mb-1">
                 <span className="flex items-center gap-1.5 uppercase">
                   {lastDecision.allowed ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   ) : (
-                    <ShieldAlert className="w-4 h-4 text-rose-400" />
+                    <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                   )}
                   {lastDecision.allowed ? 'ACCESS GRANTED' : 'ACCESS DENIED'}
                 </span>
                 <RiskBadge level={lastDecision.riskLevel} />
               </div>
               <p className="text-[11px] mt-1 opacity-90">{lastDecision.reason}</p>
-              <div className="text-[10px] text-slate-400 mt-2 font-mono flex justify-between border-t border-slate-800 pt-1">
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-2 font-mono flex justify-between border-t border-slate-200 dark:border-slate-800 pt-1">
                 <span>POLICY ID: {lastDecision.policyId}</span>
                 <span>CLEARANCE: {user.role}</span>
               </div>
@@ -241,45 +241,45 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
           {/* Action Notifications */}
           {downloadNotice && (
-            <div className="bg-emerald-950 p-3 rounded border border-emerald-800 text-emerald-300 text-[11px]">
+            <div className="bg-emerald-100 dark:bg-emerald-950 p-3 rounded border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 text-[11px]">
               {downloadNotice}
             </div>
           )}
           {shareNotice && (
-            <div className="bg-purple-950 p-3 rounded border border-purple-800 text-purple-300 text-[11px]">
+            <div className="bg-purple-100 dark:bg-purple-950 p-3 rounded border border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-300 text-[11px]">
               {shareNotice}
             </div>
           )}
           {verifyNotice && (
-            <div className="bg-amber-950 p-3 rounded border border-amber-800 text-amber-300 text-[11px]">
+            <div className="bg-amber-100 dark:bg-amber-950 p-3 rounded border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-[11px]">
               {verifyNotice}
             </div>
           )}
 
           {/* Simulated Document Preview Panel (Watermarked) */}
           {viewingPreview && lastDecision?.allowed && (
-            <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 relative overflow-hidden space-y-3">
+            <div className="bg-slate-100 dark:bg-slate-950 p-5 rounded-xl border border-slate-300 dark:border-slate-800 relative overflow-hidden space-y-3">
               {/* Watermark Overlay */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-10">
-                <span className="text-4xl font-extrabold text-white rotate-[-25deg] tracking-widest text-center">
+                <span className="text-4xl font-extrabold text-slate-900 dark:text-white rotate-[-25deg] tracking-widest text-center">
                   CASETRACE DEMO<br />AUTHORIZED VIEW
                 </span>
               </div>
 
-              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                <span className="font-bold text-white uppercase text-xs">DOCUMENT PREVIEW CONTAINER</span>
+              <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                <span className="font-bold text-slate-900 dark:text-white uppercase text-xs">DOCUMENT PREVIEW CONTAINER</span>
                 <IntegrityBadge status={document.integrityStatus} />
               </div>
 
-              <div className="text-xs text-slate-300 leading-relaxed font-sans bg-slate-900/90 p-4 rounded border border-slate-800 space-y-2">
-                <div className="font-mono text-blue-400 font-bold">{"[OFFICIAL INVESTIGATION RECORD]"}</div>
+              <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans bg-white dark:bg-slate-900/90 p-4 rounded border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="font-mono text-blue-600 dark:text-blue-400 font-bold">{"[OFFICIAL INVESTIGATION RECORD]"}</div>
                 <p>
                   This is a simulated document payload container for artifact{' '}
-                  <span className="font-mono font-bold text-white">{document.name}</span> associated with Case{' '}
-                  <span className="font-mono font-bold text-blue-400">{caseData.caseNumber}</span>.
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{document.name}</span> associated with Case{' '}
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{caseData.caseNumber}</span>.
                 </p>
-                <p className="text-[11px] text-slate-400">
-                  Security Clearance Token validated for persona <span className="font-mono text-white">{user.name} ({user.role})</span>. SHA-256 Digest match confirmed on ledger block #14820934.
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Security Clearance Token validated for persona <span className="font-mono text-slate-900 dark:text-white">{user.name} ({user.role})</span>. SHA-256 Digest match confirmed on ledger block #14820934.
                 </p>
               </div>
             </div>
