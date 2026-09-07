@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '../../../../context/AuthContext';
 import { caseService } from '../../../../services/caseService';
+import { apiClient } from '../../../../lib/apiClient';
 import { accessControlEngine } from '../../../../services/accessControlEngine';
 import { Document } from '../../../../types/document';
 import { CaseHeader } from '../../../../components/passport/CaseHeader';
@@ -37,8 +38,23 @@ export default function CasePassportDetailPage() {
     'overview' | 'documents' | 'evidence' | 'people' | 'timeline' | 'integrity' | 'security'
   >('overview');
 
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const loadDocuments = useCallback(async () => {
+    if (!caseId) return;
+    try {
+      const docs = await apiClient.getCaseDocuments(caseId);
+      setDocuments(docs);
+    } catch (err) {
+      console.error('Failed to load case documents:', err);
+    }
+  }, [caseId]);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
 
   if (!caseData) {
     return (
@@ -69,8 +85,6 @@ export default function CasePassportDetailPage() {
       </div>
     );
   }
-
-  const documents = caseService.getCaseDocuments(caseId);
 
   const handleSelectDoc = (doc: Document) => {
     setSelectedDoc(doc);
@@ -125,6 +139,7 @@ export default function CasePassportDetailPage() {
             user={currentUser}
             caseData={caseData}
             onSelectDocument={handleSelectDoc}
+            onRefreshDocuments={loadDocuments}
           />
         )}
 

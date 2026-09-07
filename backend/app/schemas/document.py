@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime
 
 class DocumentVersionSchema(BaseModel):
@@ -18,7 +18,7 @@ class DocumentBase(BaseModel):
     category: str
     sensitivity: str
     version: int
-    version_history: List[DocumentVersionSchema] = []
+    version_history: List[Any] = []
     uploaded_by: str
     uploaded_at: Optional[datetime] = None
     sha256_hash: str
@@ -26,6 +26,20 @@ class DocumentBase(BaseModel):
     allowed_roles: List[str] = []
     allowed_purposes: List[str] = []
     integrity_status: str = "VERIFIED"
+    storage_key: Optional[str] = None
+    storage_bucket: Optional[str] = None
+    file_size: Optional[int] = 0
+    mime_type: Optional[str] = "application/octet-stream"
+    original_filename: Optional[str] = None
 
 class DocumentResponse(DocumentBase):
     model_config = ConfigDict(from_attributes=True)
+
+class DocumentVerificationResult(BaseModel):
+    document_id: str
+    name: str
+    status: str  # "VERIFIED" | "TAMPERED" | "NOT_FOUND" | "VERIFICATION_ERROR"
+    stored_hash: str
+    computed_hash: Optional[str] = None
+    match: bool
+    details: str

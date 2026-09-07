@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Response
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from backend.app.db.database import get_db
 from backend.app.db.models.user import UserModel
-from backend.app.schemas.document import DocumentResponse
+from backend.app.schemas.document import DocumentResponse, DocumentVerificationResult
 from backend.app.dependencies.auth import get_current_user
 from backend.app.services.document_service import DocumentService
-from backend.app.services.audit_service import AuditService
 
 router = APIRouter()
 
@@ -29,15 +28,7 @@ def get_document_by_id(
     current_user: UserModel = Depends(get_current_user)
 ):
     service = DocumentService(db)
-    audit_svc = AuditService(db)
-
     doc, decision = service.get_document_by_id(document_id, current_user, action=action, purpose=purpose)
-
-    # Record access decision into database
-    audit_svc.record_access_decision(
-        user=current_user, case_id=doc.case_id if doc else None, document_id=document_id,
-        action=action, purpose=purpose, decision=decision
-    )
 
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document {document_id} not found.")
@@ -46,3 +37,97 @@ def get_document_by_id(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
 
     return DocumentResponse.model_validate(doc)
+
+@router.post("/cases/{case_id}/documents/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+async def upload_case_document(
+    case_id: str,
+    file: UploadFile = File(...),
+    category: str = Form("EVIDENCE"),
+    sensitivity: str = Form("CONFIDENTIAL"),
+    purpose: str = Form("INVESTIGATION"),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    # Enforce reasonable 50MB file size limit
+    content = await file.read()
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File size exceeds maximum allowed limit of 50MB."
+        )
+
+    service = DocumentService(db)
+    doc, decision = service.upload_document(
+        case_id=case_id,
+        filename=file.filename or "uploaded_file.dat",
+        content=content,
+        mime_type=file.content_type or "application/octet-stream",
+        category=category,
+        sensitivity=sensitivity,
+        user=current_user,
+        purpose=purpose
+    )
+
+    if not decision["allowed"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
+
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Document upload processing failed.")
+
+    return DocumentResponse.model_validate(doc)
+
+@router.get("/documents/{document_id}/download")
+def download_case_document(
+    document_id: str,
+    purpose: Optional[str] = Query("INVESTIGATION"),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    service = DocumentService(db)
+    content, doc, decision = service.download_document(document_id, current_user, purpose=purpose)
+
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document {document_id} not found.")
+
+    if not decision["allowed"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
+
+    if content is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Document content unavailable.")
+
+    return Response(
+        content=content,
+        media_type=doc.mime_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{doc.name}"',
+            "X-SHA256-Hash": doc.sha256_hash
+        }
+    )
+
+@router.post("/documents/{document_id}/verify", response_model=DocumentVerificationResult)
+def verify_document_integrity(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    service = DocumentService(db)
+    result = service.verify_document_integrity(document_id, current_user)
+    return DocumentVerificationResult(**result)
+
+@router.delete("/documents/{document_id}")
+def delete_case_document(
+    document_id: str,
+    purpose: Optional[str] = Query("ADMINISTRATIVE"),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    service = DocumentService(db)
+    success, res = service.delete_document(document_id, current_user, purpose=purpose)
+
+    if not res["allowed"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=res["reason"])
+
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=res["reason"])
+
+    return {"status": "success", "message": res["reason"]}

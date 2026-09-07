@@ -8,6 +8,8 @@ import os
 # Add root directory to sys.path
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+# Import all models so Base.metadata contains all tables before create_all()
+from backend.app.db.models import UserModel, CaseModel, DocumentModel, AuditLogModel, AccessRecordModel
 from backend.app.main import app
 from backend.app.db.seed import seed_database
 from backend.app.db.database import Base, get_db

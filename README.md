@@ -6,61 +6,95 @@
 
 ---
 
-## Phase 5: PostgreSQL Database Integration & Service Architecture
+## Phase 6: Secure Document Storage (MinIO / S3 Object Storage)
 
-CASETRACE Phase 5 connects the FastAPI backend to a production PostgreSQL database with connection pooling, Alembic migrations, repository/service separation, and environment-controlled data source modes (`NEXT_PUBLIC_API_MODE=real` | `mock`).
+CASETRACE Phase 6 implements secure document object storage using MinIO / S3-compatible object storage. Physical document binaries are stored in MinIO, while document metadata, SHA-256 digests, and RBAC rules are stored in PostgreSQL.
+
+**Pipeline Flow:**
+`Document Upload → Authoritative Server SHA-256 → MinIO S3 Bucket → PostgreSQL Metadata → Purpose/RBAC Validation → Mediated Download → Audit Event`
 
 ### 1. Environment Configuration
 
 Copy `.env.example` to `.env`:
 
 ```bash
-# Frontend Data Source Mode ('real' for FastAPI + PostgreSQL, 'mock' for local fallback)
+# Frontend Data Source Mode
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_API_MODE=real
 
-# Backend Database Configuration (PostgreSQL URL format)
+# PostgreSQL Database Configuration
 DATABASE_URL=postgresql://casetrace_user:casetrace_pass@localhost:5432/casetrace_db
 DB_POOL_SIZE=5
-DB_MAX_OVERFLOW=10
-DB_POOL_TIMEOUT=30
 
-# JWT & Security Settings
+# MinIO / S3-Compatible Object Storage Configuration (Phase 6)
+STORAGE_ENDPOINT=http://localhost:9000
+STORAGE_ACCESS_KEY=minioadmin
+STORAGE_SECRET_KEY=minioadmin
+STORAGE_BUCKET=casetrace-documents
+STORAGE_REGION=us-east-1
+STORAGE_SECURE=false
+
+# Security Settings
 JWT_SECRET=casetrace_secure_jwt_secret_key_2026_demo
-ALGORITHM=HS256
 ```
 
-### 2. Database Creation & Alembic Migrations
+---
 
-If running a local PostgreSQL instance:
+### 2. MinIO Local Development Setup
+
+#### Option A: Running Standalone MinIO Binary (Native Windows / Linux / macOS)
+1. Download MinIO Server binary:
+   - Windows: [minio.exe](https://dl.min.io/server/minio/release/windows-amd64/minio.exe)
+2. Start MinIO Server:
+   ```cmd
+   set MINIO_ROOT_USER=minioadmin
+   set MINIO_ROOT_PASSWORD=minioadmin
+   minio.exe server D:\minio_data --console-address ":9001"
+   ```
+3. Access MinIO Web Console at `http://localhost:9001` (Login: `minioadmin` / `minioadmin`).
+4. Create Bucket: `casetrace-documents`.
+
+#### Option B: Running via Docker (Optional)
+```bash
+docker run -p 9000:9000 -p 9001:9001 \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  minio/minio server /data --console-address ":9001"
+```
+
+#### Verifying Storage Connectivity
+Check system health endpoint:
+```bash
+curl http://localhost:8000/api/health
+```
+Response:
+```json
+{
+  "status": "ok",
+  "service": "casetrace-api",
+  "database": { "status": "connected", "dialect": "postgresql" },
+  "storage": { "status": "connected", "bucket": "casetrace-documents", "endpoint": "http://localhost:9000" }
+}
+```
+
+---
+
+### 3. Database Migrations & Seeding
 
 ```bash
-# 1. Create PostgreSQL Database
-createdb -U casetrace_user casetrace_db
-
-# 2. Run Alembic Deterministic Database Migrations
+# 1. Run Alembic Schema Upgrade (Includes 003_add_storage_metadata migration)
 alembic upgrade head
 
-# 3. Seed Development Demo Data (7 Personas, 3 Cases, Document Metadata, Audit Logs)
+# 2. Seed Development Demo Data
 python -m backend.app.db.seed
 ```
 
-*(Note: If PostgreSQL is not available locally, the backend automatically uses the development SQLite engine fallback `sqlite:///./casetrace.db` without crashing).*
-
-### 3. Running the Platform
-
-```bash
-# Start FastAPI Backend API (Port 8000)
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
-
-# Start Next.js Frontend (Port 3000)
-npm run dev
-```
+---
 
 ### 4. Running Verification Suite
 
 ```bash
-# Run Backend Pytest Suite (15 Tests)
+# Run Pytest Suite (20 Tests Covering Upload, Download, Integrity Verification, Deletion, Audit)
 python -m pytest backend/tests
 
 # Run Frontend Typecheck & ESLint

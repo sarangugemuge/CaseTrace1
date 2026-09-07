@@ -12,8 +12,6 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         "postgresql://casetrace_user:casetrace_pass@localhost:5432/casetrace_db"
     )
-    
-    # Fallback to SQLite if PostgreSQL is unavailable or configured for local dev
     DB_FALLBACK_URL: str = "sqlite:///./casetrace.db"
     
     # Database connection pool configuration
@@ -23,6 +21,14 @@ class Settings(BaseSettings):
     
     # Mode selection: 'real' or 'mock'
     API_MODE: str = os.getenv("API_MODE", "real")
+
+    # MinIO / S3-Compatible Object Storage Configuration (Phase 6)
+    STORAGE_ENDPOINT: str = os.getenv("STORAGE_ENDPOINT", "http://localhost:9000")
+    STORAGE_ACCESS_KEY: str = os.getenv("STORAGE_ACCESS_KEY", "minioadmin")
+    STORAGE_SECRET_KEY: str = os.getenv("STORAGE_SECRET_KEY", "minioadmin")
+    STORAGE_BUCKET: str = os.getenv("STORAGE_BUCKET", "casetrace-documents")
+    STORAGE_REGION: str = os.getenv("STORAGE_REGION", "us-east-1")
+    STORAGE_SECURE: bool = os.getenv("STORAGE_SECURE", "false").lower() == "true"
 
     JWT_SECRET: str = os.getenv("JWT_SECRET", "casetrace_secure_jwt_secret_key_2026_demo")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")

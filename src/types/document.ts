@@ -18,7 +18,9 @@ export type DocumentCategory =
   | 'CHARGE_SHEET'
   | 'COURT_SUBMISSION'
   | 'FINANCIAL_AUDIT'
-  | 'SYSTEM_IMAGE';
+  | 'SYSTEM_IMAGE'
+  | 'EVIDENCE'
+  | 'COURT_EXHIBIT';
 
 export interface DocumentVersion {
   versionNumber: number;
@@ -45,4 +47,9 @@ export interface Document {
   allowedRoles: Role[];
   allowedPurposes: string[];
   integrityStatus: IntegrityStatus;
+  storageKey?: string;
+  storageBucket?: string;
+  fileSize?: number;
+  mimeType?: string;
+  originalFilename?: string;
 }
