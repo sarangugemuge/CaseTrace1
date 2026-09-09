@@ -24,7 +24,6 @@ class CaseModel(Base):
     evidence_count = Column(Integer, default=0)
     document_count = Column(Integer, default=0)
     blockchain_anchor_id = Column(String, nullable=False)
-
-__table_args__ = (
-    Index("idx_cases_status_stage", "status", "case_stage"),
-)
+    __table_args__ = (
+        Index("idx_cases_status_stage", "status", "case_stage"),
+    )

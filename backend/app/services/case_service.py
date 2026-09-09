@@ -1,3 +1,5 @@
+import hashlib
+import uuid
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from backend.app.repositories.case_repository import CaseRepository
@@ -45,7 +47,19 @@ class CaseService:
         return case_obj, decision
 
     def create_case(self, case_in: CaseCreate, creator: UserModel) -> CaseModel:
-        db_case = CaseModel(**case_in.model_dump())
+        case_data = case_in.model_dump()
+        if not case_data.get("case_id"):
+            case_data["case_id"] = case_data["case_number"]
+        if not case_data.get("blockchain_anchor_id"):
+            token = f"{case_data['case_number']}-{case_data['incident_date']}-{uuid.uuid4().hex}"
+            case_data["blockchain_anchor_id"] = f"0x{hashlib.sha256(token.encode()).hexdigest()}"
+
+        assigned = list(case_data.get("assigned_users") or [])
+        if creator.id and creator.id not in assigned:
+            assigned.append(creator.id)
+        case_data["assigned_users"] = assigned
+
+        db_case = CaseModel(**case_data)
         return self.case_repo.create(db_case)
 
     def update_case(self, case_id: str, case_update: CaseUpdate) -> Optional[CaseModel]:

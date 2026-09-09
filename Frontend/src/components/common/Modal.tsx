@@ -7,15 +7,16 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  maxWidth?: string;
   children: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, maxWidth = 'max-w-lg', children }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs p-4">
-      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100 transition-colors">
+      <div className={`bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl ${maxWidth} w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-slate-100 transition-colors`}>
         <div className="bg-slate-100 dark:bg-navy-950 px-6 py-4 border-b border-slate-200 dark:border-navy-800 flex items-center justify-between">
           <h3 className="text-xs font-mono font-bold text-slate-900 dark:text-white uppercase tracking-wider">{title}</h3>
           <button

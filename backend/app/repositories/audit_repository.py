@@ -10,8 +10,11 @@ class AuditRepository:
     def list_all_logs(self) -> List[AuditLogModel]:
         return self.db.query(AuditLogModel).order_by(AuditLogModel.timestamp.desc()).all()
 
-    def list_logs_by_case(self, case_id: str) -> List[AuditLogModel]:
-        return self.db.query(AuditLogModel).filter(AuditLogModel.case_id == case_id).order_by(AuditLogModel.timestamp.desc()).all()
+    def list_logs_by_case(self, case_id: str, order: str = "asc") -> List[AuditLogModel]:
+        q = self.db.query(AuditLogModel).filter(AuditLogModel.case_id == case_id)
+        if order.lower() == "desc":
+            return q.order_by(AuditLogModel.timestamp.desc()).all()
+        return q.order_by(AuditLogModel.timestamp.asc()).all()
 
     def create_log(self, log_entry: AuditLogModel) -> AuditLogModel:
         self.db.add(log_entry)

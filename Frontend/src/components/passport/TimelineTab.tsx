@@ -8,7 +8,7 @@ import { ChainOfCustody } from './ChainOfCustody';
 export const TimelineTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) => {
   return (
     <div className="space-y-6">
-      <ChainOfCustody caseId={caseData.caseId} />
+      <ChainOfCustody caseId={caseData.caseId} caseData={caseData} />
       <LedgerTimeline />
     </div>
   );

@@ -5,7 +5,7 @@ from backend.app.core.config import settings
 from backend.app.db.database import engine, Base, SessionLocal
 from backend.app.db.models.user import UserModel
 from backend.app.db.seed import seed_database
-from backend.app.api.routes import health, auth, cases, documents, audit, verification
+from backend.app.api.routes import health, auth, cases, documents, audit, verification, dashboard, search, notifications
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,7 +35,8 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,6 +49,9 @@ app.include_router(cases.router, prefix=settings.API_PREFIX, tags=["Cases"])
 app.include_router(documents.router, prefix=settings.API_PREFIX, tags=["Documents"])
 app.include_router(audit.router, prefix=settings.API_PREFIX, tags=["Audit"])
 app.include_router(verification.router, prefix=settings.API_PREFIX, tags=["Verification"])
+app.include_router(dashboard.router, prefix=settings.API_PREFIX, tags=["Dashboard"])
+app.include_router(search.router, prefix=settings.API_PREFIX, tags=["Search"])
+app.include_router(notifications.router, prefix=settings.API_PREFIX, tags=["Notifications"])
 
 if __name__ == "__main__":
     import uvicorn

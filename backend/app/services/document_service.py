@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from typing import List, Optional, Tuple, Dict, Any
+from fastapi import HTTPException, status
 from backend.app.repositories.document_repository import DocumentRepository
 from backend.app.repositories.case_repository import CaseRepository
 from backend.app.db.models.user import UserModel
@@ -76,7 +77,8 @@ class DocumentService:
         category: str,
         sensitivity: str,
         user: UserModel,
-        purpose: Optional[str] = "INVESTIGATION"
+        purpose: Optional[str] = "INVESTIGATION",
+        evidence_id: Optional[str] = None
     ) -> Tuple[Optional[DocumentModel], Dict[str, Any]]:
         case_obj = self.case_repo.get_by_id(case_id)
         if not case_obj:
@@ -103,7 +105,7 @@ class DocumentService:
 
         # 1. Authoritative Server-side SHA-256 calculation
         computed_sha256 = hashlib.sha256(content).hexdigest()
-        doc_id = f"doc-{uuid.uuid4().hex[:8]}"
+        doc_id = evidence_id.strip() if evidence_id and evidence_id.strip() else f"doc-{uuid.uuid4().hex[:8]}"
         safe_key = f"cases/{case_id}/{doc_id}/{filename}"
 
         # 2. Upload binary file to MinIO S3 object storage
@@ -201,10 +203,51 @@ class DocumentService:
     ) -> Dict[str, Any]:
         doc = self.doc_repo.get_by_id(document_id)
         if not doc:
-            return {
-                "document_id": document_id, "name": "UNKNOWN", "status": "NOT_FOUND",
-                "stored_hash": "", "computed_hash": None, "match": False, "details": f"Document {document_id} not found."
-            }
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document or evidence {document_id} not found."
+            )
+
+        # Enforce RBAC security clearance on verification
+        allowed_roles = doc.allowed_roles or []
+        if allowed_roles and user.role not in allowed_roles and user.role != "Admin":
+            self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=document_id, action="UNAUTHORIZED_VERIFICATION_ATTEMPT",
+                purpose="AUDIT", result="BLOCKED", risk_level="HIGH",
+                description=f"Unauthorized verification attempt by {user.name} ({user.role}): Role not in allowed roles."
+            ))
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Clearance Denied: Role '{user.role}' is not authorized to verify this document."
+            )
+
+        case_obj = self.case_repo.get_by_id(doc.case_id)
+        user_assigned = user.assigned_case_ids or []
+        case_assigned = case_obj.assigned_users or [] if case_obj else []
+        is_assigned = (doc.case_id in user_assigned) or (user.id in case_assigned)
+        is_cross_dept = user.role in ["Senior Officer", "Auditor / Security", "Admin", "Forensic Officer"]
+        if not is_assigned and not is_cross_dept:
+            self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=document_id, action="UNAUTHORIZED_VERIFICATION_ATTEMPT",
+                purpose="AUDIT", result="BLOCKED", risk_level="HIGH",
+                description=f"Unauthorized verification attempt by {user.name} ({user.role}): Not assigned to case {doc.case_id}."
+            ))
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Clearance Denied: User is not assigned to case {doc.case_id}."
+            )
+
+        # Court User is strictly restricted to PUBLIC documents
+        if user.role == "Court User" and doc.sensitivity != "PUBLIC":
+            self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=document_id, action="UNAUTHORIZED_VERIFICATION_ATTEMPT",
+                purpose="AUDIT", result="BLOCKED", risk_level="HIGH",
+                description=f"Unauthorized verification attempt by {user.name} ({user.role}): Cannot access {doc.sensitivity} document."
+            ))
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Clearance Denied: Court User is not authorized to access '{doc.sensitivity}' documents."
+            )
 
         computed_hash = None
         status_code = "VERIFIED"
@@ -231,19 +274,24 @@ class DocumentService:
             match = True
             details = "Verified against authoritative metadata ledger record."
 
+        verification_result = "INTEGRITY VERIFIED" if match else "INTEGRITY MISMATCH"
+
         self.audit_svc.create_log(user, AuditCreate(
             case_id=doc.case_id, document_id=document_id, action="INTEGRITY_VERIFICATION",
             purpose="AUDIT", result="SUCCESS" if match else "TAMPER_ALERT",
             risk_level="LOW" if match else "CRITICAL",
-            description=f"Integrity check for '{doc.name}': {status_code}"
+            description=f"Integrity check for '{doc.name}': {verification_result}"
         ))
 
         return {
             "document_id": doc.id,
             "name": doc.name,
             "status": status_code,
+            "verification_result": verification_result,
             "stored_hash": doc.sha256_hash,
+            "original_hash": doc.sha256_hash,
             "computed_hash": computed_hash,
+            "current_hash": computed_hash,
             "match": match,
             "details": details
         }

@@ -23,7 +23,7 @@ class StorageService:
                 aws_secret_access_key=settings.STORAGE_SECRET_KEY,
                 region_name=settings.STORAGE_REGION,
                 use_ssl=settings.STORAGE_SECURE,
-                config=Config(signature_version='s3v4', connect_timeout=2, read_timeout=2)
+                config=Config(signature_version='s3v4', connect_timeout=1, read_timeout=1, retries={'max_attempts': 1})
             )
         except Exception as err:
             logger.error(f"Failed to initialize S3 storage client: {err}")
@@ -40,9 +40,9 @@ class StorageService:
                 ContentType=mime_type
             )
             return True
-        except ClientError as e:
-            logger.error(f"S3 upload error for key {storage_key}: {e}")
-            raise RuntimeError(f"Storage upload failure: {e.response['Error']['Message']}")
+        except Exception as e:
+            logger.warning(f"S3 upload error for key {storage_key}: {e}")
+            raise RuntimeError(f"Storage upload failure: {e}")
 
     def download_object(self, storage_key: str) -> bytes:
         if not self.client:
@@ -50,21 +50,19 @@ class StorageService:
         try:
             response = self.client.get_object(Bucket=self.bucket, Key=storage_key)
             return response['Body'].read()
-        except ClientError as e:
-            if e.response['Error']['Code'] == 'NoSuchKey':
-                raise FileNotFoundError(f"Object key {storage_key} not found in bucket {self.bucket}.")
-            logger.error(f"S3 download error for key {storage_key}: {e}")
-            raise RuntimeError(f"Storage download failure: {e.response['Error']['Message']}")
+        except Exception as e:
+            logger.warning(f"S3 download error for key {storage_key}: {e}")
+            raise RuntimeError(f"Storage download failure: {e}")
 
     def delete_object(self, storage_key: str) -> bool:
         if not self.client:
-            raise RuntimeError("MinIO object storage is currently offline or unreachable.")
+            return False
         try:
             self.client.delete_object(Bucket=self.bucket, Key=storage_key)
             return True
-        except ClientError as e:
-            logger.error(f"S3 delete error for key {storage_key}: {e}")
-            raise RuntimeError(f"Storage deletion failure: {e.response['Error']['Message']}")
+        except Exception as e:
+            logger.warning(f"S3 delete error for key {storage_key}: {e}")
+            return False
 
     def object_exists(self, storage_key: str) -> bool:
         if not self.client:
@@ -72,7 +70,7 @@ class StorageService:
         try:
             self.client.head_object(Bucket=self.bucket, Key=storage_key)
             return True
-        except ClientError:
+        except Exception:
             return False
 
     def generate_presigned_url(self, storage_key: str, expires_in: int = 300) -> str:

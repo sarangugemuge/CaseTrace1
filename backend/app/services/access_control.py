@@ -52,6 +52,17 @@ def evaluate_access(
             "policy_id": "POL-CASE-ASSIGNMENT-01",
         }
 
+    # 3. Action-Specific Role Validation (e.g. UPLOAD)
+    if action == "UPLOAD":
+        if user_role not in [SENIOR_OFFICER, INVESTIGATING_OFFICER, FORENSIC_OFFICER, ADMIN]:
+            return {
+                "allowed": False,
+                "reason": f"Role '{user_role}' is not authorized to upload documents or register evidence.",
+                "risk_level": "HIGH",
+                "requires_purpose": False,
+                "policy_id": "POL-UPLOAD-RESTRICTED-01",
+            }
+
     if not document_sensitivity:
         return {
             "allowed": True,
@@ -61,7 +72,7 @@ def evaluate_access(
             "policy_id": "POL-CASE-VIEW-01",
         }
 
-    # 3. Sensitivity Level Check
+    # 4. Sensitivity Level Check
     allowed_levels = ALLOWED_SENSITIVITIES.get(user_role, [])
     if document_sensitivity not in allowed_levels:
         return {

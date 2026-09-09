@@ -3,6 +3,8 @@ import { Role } from './auth';
 export type AuditEventType =
   | 'LOGIN'
   | 'LOGOUT'
+  | 'CASE_CREATED'
+  | 'CASE_UPDATED'
   | 'CASE_VIEW'
   | 'DOCUMENT_VIEW'
   | 'DOCUMENT_DOWNLOAD'
@@ -38,3 +40,12 @@ export interface AuditEntry {
   description: string;
   ipAddress?: string;
 }
+
+export interface AuditSummary {
+  totalRecentEvents: number;
+  successfulAccesses: number;
+  deniedAttempts: number;
+  evidenceVerificationEvents: number;
+  highRiskEvents: number;
+}
+

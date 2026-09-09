@@ -14,8 +14,8 @@ class AuditService:
     def list_all_logs(self) -> List[AuditLogModel]:
         return self.audit_repo.list_all_logs()
 
-    def list_case_logs(self, case_id: str) -> List[AuditLogModel]:
-        return self.audit_repo.list_logs_by_case(case_id)
+    def list_case_logs(self, case_id: str, order: str = "asc") -> List[AuditLogModel]:
+        return self.audit_repo.list_logs_by_case(case_id, order=order)
 
     def create_log(self, user: UserModel, audit_in: AuditCreate) -> AuditLogModel:
         log_entry = AuditLogModel(

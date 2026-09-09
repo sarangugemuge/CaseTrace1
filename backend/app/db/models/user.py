@@ -16,7 +16,6 @@ class UserModel(Base):
     assigned_case_ids = Column(JSON, nullable=True, default=list)
     status = Column(String, default="ACTIVE")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-
-__table_args__ = (
-    Index("idx_users_role_status", "role", "status"),
-)
+    __table_args__ = (
+        Index("idx_users_role_status", "role", "status"),
+    )

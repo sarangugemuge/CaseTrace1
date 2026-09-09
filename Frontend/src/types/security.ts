@@ -46,3 +46,31 @@ export interface ChainOfCustodyEvent {
   verificationBadge: 'VERIFIED' | 'TAMPERED' | 'UNCHECKED';
   notes: string;
 }
+
+export interface DashboardActivity {
+  eventId: string;
+  timestamp: string;
+  action: string;
+  caseId?: string;
+  caseNumber?: string;
+  documentId?: string;
+  documentName?: string;
+  userName?: string;
+  role?: string;
+  result: string;
+  riskLevel: string;
+  description: string;
+}
+
+export interface DashboardStats {
+  activeCases: number;
+  criticalCases: number;
+  totalEvidenceItems: number;
+  pendingVerification: number;
+  integrityAlerts: number;
+  totalAuthorizedCases: number;
+  userRole: string;
+  userName?: string;
+  recentActivity: DashboardActivity[];
+}
+

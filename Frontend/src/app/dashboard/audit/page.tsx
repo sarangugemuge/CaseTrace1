@@ -21,8 +21,8 @@ export default function AuditPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Security Audit Trail & Risk Operations
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Immutably tracked access events, role clearance evaluations, and heuristic risk scoring.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans">
+            Immutable Audit Trail: Tamper-evident activity log that cannot be modified or deleted once recorded. Access is controlled according to the user's role (RBAC).
           </p>
         </div>
       </div>

@@ -27,8 +27,7 @@ class DocumentModel(Base):
     file_size = Column(Integer, nullable=True, default=0)
     mime_type = Column(String, nullable=True, default="application/octet-stream")
     original_filename = Column(String, nullable=True)
-
-__table_args__ = (
-    Index("idx_docs_case_sensitivity", "case_id", "sensitivity"),
-    Index("idx_docs_storage_key", "storage_key"),
-)
+    __table_args__ = (
+        Index("idx_docs_case_sensitivity", "case_id", "sensitivity"),
+        Index("idx_docs_storage_key", "storage_key"),
+    )

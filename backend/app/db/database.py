@@ -1,7 +1,20 @@
 import logging
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, declarative_base
-from backend.app.core.config import settings
+
+try:
+    from sqlalchemy import create_engine, text  # type: ignore[import-not-found]
+    from sqlalchemy.orm import sessionmaker, declarative_base  # type: ignore[import-not-found]
+except ImportError as exc:  # pragma: no cover
+    raise ImportError("SQLAlchemy is required to run the database layer.") from exc
+
+try:
+    from backend.app.core.config import settings  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover
+    try:
+        from app.core.config import settings  # type: ignore[import-not-found]
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError(
+            "Unable to import application settings from backend.app.core.config or app.core.config"
+        ) from exc
 
 logger = logging.getLogger("casetrace.db")
 
@@ -13,6 +26,7 @@ def create_db_engine(db_url: str):
         connect_args = {"check_same_thread": False}
     else:
         # PostgreSQL pool configuration
+        connect_args = {"connect_timeout": 3}
         engine_kwargs.update({
             "pool_size": settings.DB_POOL_SIZE,
             "max_overflow": settings.DB_MAX_OVERFLOW,

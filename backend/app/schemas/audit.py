@@ -29,3 +29,11 @@ class AuditResponse(AuditBase):
     timestamp: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class AuditSummaryResponse(BaseModel):
+    total_recent_events: int
+    successful_accesses: int
+    denied_attempts: int
+    evidence_verification_events: int
+    high_risk_events: int
+

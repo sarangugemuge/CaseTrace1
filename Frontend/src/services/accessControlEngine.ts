@@ -120,4 +120,8 @@ export const accessControlEngine = {
     if (action === 'DOWNLOAD' || action === 'SHARE') return true;
     return false;
   },
+
+  canCreateCase(user: User): boolean {
+    return user.role === 'Senior Officer' || user.role === 'Admin';
+  },
 };

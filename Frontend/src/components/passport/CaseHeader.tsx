@@ -19,7 +19,10 @@ export const CaseHeader: React.FC<CaseHeaderProps> = ({ caseData }) => {
               {caseData.caseNumber}
             </span>
             <SensitivityBadge sensitivity={caseData.classification as any} />
-            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-bold bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 rounded">
+            <span
+              className="text-xs font-mono text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-bold bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 rounded"
+              title="Cryptographically sealed and tamper-evident: Genesis block record prevents retroactive alteration."
+            >
               <ShieldCheck className="w-3.5 h-3.5" />
               BLOCKCHAIN ANCHORED
             </span>

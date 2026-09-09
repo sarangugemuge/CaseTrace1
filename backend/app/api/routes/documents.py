@@ -45,11 +45,16 @@ async def upload_case_document(
     category: str = Form("EVIDENCE"),
     sensitivity: str = Form("CONFIDENTIAL"),
     purpose: str = Form("INVESTIGATION"),
+    evidence_id: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    # Enforce reasonable 50MB file size limit
     content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot upload an empty file (0 bytes)."
+        )
     if len(content) > 50 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -65,7 +70,8 @@ async def upload_case_document(
         category=category,
         sensitivity=sensitivity,
         user=current_user,
-        purpose=purpose
+        purpose=purpose,
+        evidence_id=evidence_id
     )
 
     if not decision["allowed"]:

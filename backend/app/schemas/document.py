@@ -41,5 +41,8 @@ class DocumentVerificationResult(BaseModel):
     status: str  # "VERIFIED" | "TAMPERED" | "NOT_FOUND" | "VERIFICATION_ERROR"
     stored_hash: str
     computed_hash: Optional[str] = None
+    original_hash: Optional[str] = None
+    current_hash: Optional[str] = None
+    verification_result: str = "INTEGRITY VERIFIED"  # "INTEGRITY VERIFIED" | "INTEGRITY MISMATCH"
     match: bool
     details: str

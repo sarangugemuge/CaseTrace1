@@ -17,7 +17,6 @@ class AccessRecordModel(Base):
     risk_level = Column(String, nullable=False)
     reason = Column(String, nullable=False)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
-
-__table_args__ = (
-    Index("idx_access_records_user_case", "user_id", "case_id"),
-)
+    __table_args__ = (
+        Index("idx_access_records_user_case", "user_id", "case_id"),
+    )

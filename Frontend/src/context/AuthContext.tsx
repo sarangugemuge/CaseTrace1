@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Role } from '../types/auth';
-import { authService } from '../services/authService';
-import { auditService } from '../services/auditService';
+import * as React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import type { User, Role } from "../types/auth";
+import { authService } from "../services/authService";
+import { auditService } from "../services/auditService";
 
 interface AuthContextType {
   currentUser: User;
@@ -15,8 +16,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(authService.getCurrentUser());
+export const AuthProvider = ({
+  children,
+}: React.PropsWithChildren): React.ReactElement => {
+  const [currentUser, setCurrentUser] = useState<User>(
+    authService.getCurrentUser(),
+  );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
 
   useEffect(() => {
@@ -29,17 +34,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = authService.login(userId);
     setCurrentUser(user);
     setIsAuthenticated(true);
-    auditService.logEvent(user, 'LOGIN', {
-      result: 'SUCCESS',
-      riskLevel: 'LOW',
+    auditService.logEvent(user, "LOGIN", {
+      result: "SUCCESS",
+      riskLevel: "LOW",
       description: `User ${user.name} logged into CASETRACE with role ${user.role}.`,
     });
   };
 
   const handleLogout = () => {
-    auditService.logEvent(currentUser, 'LOGOUT', {
-      result: 'SUCCESS',
-      riskLevel: 'LOW',
+    auditService.logEvent(currentUser, "LOGOUT", {
+      result: "SUCCESS",
+      riskLevel: "LOW",
       description: `User ${currentUser.name} logged out.`,
     });
     authService.logout();
@@ -50,9 +55,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = authService.switchDemoRole(role);
     setCurrentUser(user);
     setIsAuthenticated(true);
-    auditService.logEvent(user, 'LOGIN', {
-      result: 'SUCCESS',
-      riskLevel: 'LOW',
+    auditService.logEvent(user, "LOGIN", {
+      result: "SUCCESS",
+      riskLevel: "LOW",
       description: `Demo Persona switched to ${user.name} (${user.role}).`,
     });
   };
@@ -75,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

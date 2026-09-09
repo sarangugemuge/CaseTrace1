@@ -18,7 +18,6 @@ class AuditLogModel(Base):
     risk_level = Column(String, nullable=False)
     description = Column(String, nullable=False)
     ip_address = Column(String, nullable=True, default="10.240.12.84")
-
-__table_args__ = (
-    Index("idx_audit_case_time", "case_id", "timestamp"),
-)
+    __table_args__ = (
+        Index("idx_audit_case_time", "case_id", "timestamp"),
+    )

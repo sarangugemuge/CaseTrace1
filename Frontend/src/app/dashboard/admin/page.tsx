@@ -1,12 +1,29 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useAuth } from '../../../context/AuthContext';
 import { MOCK_USERS } from '../../../mock/users';
 import { Settings, Shield, UserCheck, Lock, Sliders, Database, Server } from 'lucide-react';
+import { PermissionDeniedState } from '../../../components/common/UXStates';
 
 export default function AdminPage() {
   const { currentUser } = useAuth();
+  const isAuthorized = currentUser.role === 'Admin' || currentUser.role === 'Senior Officer';
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-3xl mx-auto my-8">
+        <PermissionDeniedState
+          role={currentUser.role}
+          reason={`Your current demo role "${currentUser.role}" (${currentUser.name}) lacks clearance to access the System Governance and Policy Console. Administrative actions are restricted exclusively to Admin and Senior Officer personas.`}
+          policyId="POL-ADMIN-RESTRICTED-01"
+          onReturnHref="/dashboard"
+          onReturnText="Return to Dashboard"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -21,7 +38,7 @@ export default function AdminPage() {
             Role & Security Policy Console
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage system roles, classification rules, and backend fallback configurations.
+            System Administration: Access is controlled according to the user&apos;s role (RBAC). Configure user personas, system rules, and backend fallback configurations.
           </p>
         </div>
 
@@ -45,11 +62,11 @@ export default function AdminPage() {
           <table className="w-full text-left font-mono text-xs">
             <thead className="bg-slate-100 dark:bg-navy-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="px-4 py-3">User Name</th>
-                <th className="px-4 py-3">Security Role</th>
-                <th className="px-4 py-3">Department</th>
-                <th className="px-4 py-3">Designation</th>
-                <th className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3">User Name</th>
+                <th scope="col" className="px-4 py-3">Security Role</th>
+                <th scope="col" className="px-4 py-3">Department</th>
+                <th scope="col" className="px-4 py-3">Designation</th>
+                <th scope="col" className="px-4 py-3">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
