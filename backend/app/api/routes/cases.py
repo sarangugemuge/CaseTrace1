@@ -51,10 +51,11 @@ def create_case(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    if current_user.role not in ["Senior Officer", "Admin"]:
+    # Role-based incident creation: Senior Officer, Investigating Officer, and Admin allowed
+    if current_user.role not in ["Senior Officer", "Investigating Officer", "Admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Senior Officers and Admins are authorized to create new cases."
+            detail="Role not authorized to record new incidents or create case passports."
         )
 
     service = CaseService(db)
@@ -84,10 +85,10 @@ def create_case(
             case_id=db_case.case_id,
             document_id=None,
             action="CASE_CREATED",
-            purpose="EXECUTIVE_GOVERNANCE",
+            purpose="INVESTIGATION_INTAKE",
             result="SUCCESS",
             risk_level="LOW",
-            description=f"Digital Case Passport created: {db_case.case_number} - {db_case.title}"
+            description=f"Digital Case Passport initialized: {db_case.case_number} - {db_case.title} by {current_user.name} ({current_user.role})"
         )
     )
 
@@ -96,7 +97,7 @@ def create_case(
         case_id=db_case.case_id,
         document_id=None,
         action="CASE_CREATED",
-        purpose="EXECUTIVE_GOVERNANCE",
+        purpose="INVESTIGATION_INTAKE",
         decision={
             "allowed": True,
             "reason": f"Digital Case Passport created: {db_case.case_number} - {db_case.title}",
@@ -114,14 +115,50 @@ def update_case(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    if current_user.role not in ["Senior Officer", "Admin"]:
+    service = CaseService(db)
+    audit_svc = AuditService(db)
+
+    updated_case, decision = service.update_case(case_id, case_update, current_user)
+
+    if not decision["allowed"]:
+        audit_svc.create_log(
+            current_user,
+            AuditCreate(
+                case_id=case_id,
+                document_id=None,
+                action="CASE_UPDATE_ATTEMPT",
+                purpose="INVESTIGATION",
+                result="DENIED",
+                risk_level="HIGH",
+                description=f"Unauthorized case update attempt by {current_user.name} ({current_user.role}): {decision['reason']}"
+            )
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Senior Officers and Admins are authorized to update case passport properties."
+            detail=decision["reason"]
         )
-    service = CaseService(db)
-    updated = service.update_case(case_id, case_update)
-    if not updated:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Case {case_id} not found.")
-    return CaseResponse.model_validate(updated)
 
+    if not updated_case:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Case {case_id} not found.")
+
+    # Record audit logs for each changed field (Req 17)
+    changes = decision.get("changes", [])
+    if changes:
+        change_summary = "; ".join([
+            f"{c['field']}: '{c['previous_value']}' -> '{c['new_value']}'"
+            for c in changes
+        ])
+        audit_svc.create_log(
+            current_user,
+            AuditCreate(
+                case_id=case_id,
+                document_id=None,
+                action="CASE_UPDATED",
+                purpose="INVESTIGATION",
+                result="SUCCESS",
+                risk_level="LOW",
+                description=f"Case {case_id} updated by {current_user.name} ({current_user.role}). Changes: {change_summary}"
+            )
+        )
+
+    return CaseResponse.model_validate(updated_case)

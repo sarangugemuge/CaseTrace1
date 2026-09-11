@@ -5,7 +5,7 @@ from backend.app.core.config import settings
 from backend.app.db.database import engine, Base, SessionLocal
 from backend.app.db.models.user import UserModel
 from backend.app.db.seed import seed_database
-from backend.app.api.routes import health, auth, cases, documents, audit, verification, dashboard, search, notifications
+from backend.app.api.routes import health, auth, cases, documents, audit, verification, dashboard, search, notifications, admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,6 +52,7 @@ app.include_router(verification.router, prefix=settings.API_PREFIX, tags=["Verif
 app.include_router(dashboard.router, prefix=settings.API_PREFIX, tags=["Dashboard"])
 app.include_router(search.router, prefix=settings.API_PREFIX, tags=["Search"])
 app.include_router(notifications.router, prefix=settings.API_PREFIX, tags=["Notifications"])
+app.include_router(admin.router, prefix=settings.API_PREFIX, tags=["Admin & System Configuration"])
 
 if __name__ == "__main__":
     import uvicorn

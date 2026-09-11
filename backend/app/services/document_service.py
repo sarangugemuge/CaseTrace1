@@ -78,7 +78,9 @@ class DocumentService:
         sensitivity: str,
         user: UserModel,
         purpose: Optional[str] = "INVESTIGATION",
-        evidence_id: Optional[str] = None
+        evidence_id: Optional[str] = None,
+        description: Optional[str] = None,
+        notes: Optional[str] = None
     ) -> Tuple[Optional[DocumentModel], Dict[str, Any]]:
         case_obj = self.case_repo.get_by_id(case_id)
         if not case_obj:
@@ -108,7 +110,7 @@ class DocumentService:
         doc_id = evidence_id.strip() if evidence_id and evidence_id.strip() else f"doc-{uuid.uuid4().hex[:8]}"
         safe_key = f"cases/{case_id}/{doc_id}/{filename}"
 
-        # 2. Upload binary file to MinIO S3 object storage
+        # 2. Upload binary file to MinIO S3 / Local Object Storage
         storage_uploaded = False
         try:
             storage_service.upload_object(safe_key, content, mime_type)
@@ -116,7 +118,21 @@ class DocumentService:
         except Exception as st_err:
             logger.warning(f"Object storage upload skipped or failed ({st_err}). Document metadata will record pending storage key.")
 
-        # 3. Create document metadata record in PostgreSQL
+        now_iso = datetime.now(timezone.utc).isoformat()
+        initial_version_history = [
+            {
+                "version_number": 1,
+                "version": 1,
+                "uploaded_at": now_iso,
+                "uploaded_by": user.name,
+                "sha256_hash": computed_sha256,
+                "file_size": f"{len(content)} B",
+                "change_summary": "Initial evidence ingest and SHA-256 anchor registration",
+                "change_reason": "Initial evidence ingest and SHA-256 anchor registration"
+            }
+        ]
+
+        # 3. Create document metadata record
         doc_model = DocumentModel(
             id=doc_id,
             case_id=case_id,
@@ -125,6 +141,7 @@ class DocumentService:
             category=category,
             sensitivity=sensitivity,
             version=1,
+            version_history=initial_version_history,
             uploaded_by=user.name,
             uploaded_at=datetime.now(timezone.utc),
             sha256_hash=computed_sha256,
@@ -136,13 +153,14 @@ class DocumentService:
             storage_bucket=storage_service.bucket,
             file_size=len(content),
             mime_type=mime_type,
-            original_filename=filename
+            original_filename=filename,
+            description=description,
+            notes=notes
         )
 
         try:
             saved_doc = self.doc_repo.create(doc_model)
         except Exception as db_err:
-            # Safe transaction rollback: cleanup S3 object if DB persistence fails
             if storage_uploaded:
                 try:
                     storage_service.delete_object(safe_key)
@@ -158,6 +176,184 @@ class DocumentService:
         ))
 
         return saved_doc, decision
+
+    def add_document_version(
+        self,
+        document_id: str,
+        content: bytes,
+        filename: str,
+        mime_type: str,
+        user: UserModel,
+        change_reason: str,
+        purpose: Optional[str] = "INVESTIGATION"
+    ) -> Tuple[Optional[DocumentModel], Dict[str, Any]]:
+        doc = self.doc_repo.get_by_id(document_id)
+        if not doc:
+            return None, {"allowed": False, "reason": f"Document {document_id} not found."}
+
+        case_obj = self.case_repo.get_by_id(doc.case_id)
+        user_assigned = user.assigned_case_ids or []
+        decision = evaluate_access(
+            user_role=user.role,
+            user_assigned_cases=user_assigned,
+            user_id=user.id,
+            case_id=doc.case_id,
+            case_assigned_users=case_obj.assigned_users if case_obj else [],
+            action="UPLOAD",
+            purpose=purpose
+        )
+
+        if not decision["allowed"]:
+            self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=document_id, action="DOCUMENT_VERSION_ATTEMPT",
+                purpose=purpose, result="BLOCKED", risk_level="HIGH",
+                description=f"Unauthorized version upload attempt for '{doc.name}' by {user.name} ({user.role}): {decision['reason']}"
+            ))
+            return None, decision
+
+        # Compute new SHA-256
+        new_sha256 = hashlib.sha256(content).hexdigest()
+        prev_sha256 = doc.sha256_hash
+        next_version = (doc.version or 1) + 1
+        safe_key = f"cases/{doc.case_id}/{doc.id}/v{next_version}_{filename}"
+
+        # Upload new version to storage
+        storage_service.upload_object(safe_key, content, mime_type)
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        current_history = list(doc.version_history or [])
+        
+        # Ensure initial version is present in history if missing
+        if not current_history:
+            current_history.append({
+                "version_number": doc.version or 1,
+                "version": doc.version or 1,
+                "uploaded_at": doc.uploaded_at.isoformat() if doc.uploaded_at else now_iso,
+                "uploaded_by": doc.uploaded_by or "System",
+                "sha256_hash": prev_sha256,
+                "file_size": f"{doc.file_size or 0} B",
+                "change_summary": "Initial baseline version",
+                "change_reason": "Initial baseline version"
+            })
+
+        new_entry = {
+            "version_number": next_version,
+            "version": next_version,
+            "uploaded_at": now_iso,
+            "uploaded_by": user.name,
+            "sha256_hash": new_sha256,
+            "previous_hash": prev_sha256,
+            "file_size": f"{len(content)} B",
+            "filename": filename,
+            "change_summary": change_reason,
+            "change_reason": change_reason
+        }
+        current_history.append(new_entry)
+
+        # Update document model
+        doc.version = next_version
+        doc.sha256_hash = new_sha256
+        doc.storage_key = safe_key
+        doc.file_size = len(content)
+        doc.mime_type = mime_type
+        doc.name = filename
+        doc.version_history = current_history
+        doc.integrity_status = "VERIFIED"
+
+        self.db.add(doc)
+        self.db.commit()
+        self.db.refresh(doc)
+
+        # Audit log for modification
+        self.audit_svc.create_log(user, AuditCreate(
+            case_id=doc.case_id, document_id=doc.id, action="DOCUMENT_MODIFIED",
+            purpose=purpose, result="SUCCESS", risk_level="MEDIUM",
+            description=f"Document '{doc.name}' versioned to v{next_version}. Prev Hash: {prev_sha256[:12]}..., New Hash: {new_sha256[:12]}... Reason: {change_reason}"
+        ))
+
+        return doc, {"allowed": True, "reason": f"Version {next_version} uploaded successfully."}
+
+    def update_document_metadata(
+        self,
+        document_id: str,
+        updates: Dict[str, Any],
+        user: UserModel,
+        purpose: Optional[str] = "INVESTIGATION"
+    ) -> Tuple[Optional[DocumentModel], Dict[str, Any]]:
+        doc = self.doc_repo.get_by_id(document_id)
+        if not doc:
+            return None, {"allowed": False, "reason": f"Document {document_id} not found."}
+
+        case_obj = self.case_repo.get_by_id(doc.case_id)
+        user_assigned = user.assigned_case_ids or []
+        decision = evaluate_access(
+            user_role=user.role,
+            user_assigned_cases=user_assigned,
+            user_id=user.id,
+            case_id=doc.case_id,
+            case_assigned_users=case_obj.assigned_users if case_obj else [],
+            action="VIEW",
+            purpose=purpose
+        )
+
+        allowed_modifier_roles = ["Senior Officer", "Investigating Officer", "Forensic Officer", "Admin"]
+        if user.role not in allowed_modifier_roles:
+            decision["allowed"] = False
+            decision["reason"] = f"Role '{user.role}' is not authorized to edit document metadata."
+
+        if not decision["allowed"]:
+            self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=document_id, action="DOCUMENT_METADATA_UPDATE_ATTEMPT",
+                purpose=purpose, result="BLOCKED", risk_level="HIGH",
+                description=f"Unauthorized metadata edit attempt for '{doc.name}': {decision['reason']}"
+            ))
+            return None, decision
+
+        field_diffs = []
+        for field, new_val in updates.items():
+            if hasattr(doc, field) and new_val is not None:
+                old_val = getattr(doc, field)
+                if old_val != new_val:
+                    field_diffs.append(f"{field}: '{old_val}' -> '{new_val}'")
+                    setattr(doc, field, new_val)
+
+        if field_diffs:
+            self.db.add(doc)
+            self.db.commit()
+            self.db.refresh(doc)
+
+            self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=doc.id, action="DOCUMENT_METADATA_UPDATED",
+                purpose=purpose, result="SUCCESS", risk_level="LOW",
+                description=f"Metadata updated for '{doc.name}': {'; '.join(field_diffs)}"
+            ))
+
+        return doc, {"allowed": True, "reason": "Metadata updated successfully."}
+
+    def get_document_for_view(
+        self, document_id: str, user: UserModel, purpose: Optional[str] = "VIEW"
+    ) -> Tuple[Optional[bytes], Optional[DocumentModel], Dict[str, Any]]:
+        doc, decision = self.get_document_by_id(document_id, user, action="VIEW", purpose=purpose)
+        if not doc or not decision["allowed"]:
+            return None, doc, decision
+
+        file_bytes = None
+        if doc.storage_key:
+            try:
+                file_bytes = storage_service.download_object(doc.storage_key)
+            except Exception as e:
+                logger.warning(f"Could not retrieve object {doc.storage_key}: {e}")
+                file_bytes = f"--- [Preview Unavailable for {doc.name}] ---".encode("utf-8")
+        else:
+            file_bytes = f"--- [CASETRACE METADATA VIEW FOR {doc.name}] ---".encode("utf-8")
+
+        self.audit_svc.create_log(user, AuditCreate(
+            case_id=doc.case_id, document_id=document_id, action="DOCUMENT_VIEW",
+            purpose=purpose, result="SUCCESS", risk_level="LOW",
+            description=f"Document '{doc.name}' viewed inline by {user.name}."
+        ))
+
+        return file_bytes, doc, decision
 
     def download_document(
         self, document_id: str, user: UserModel, purpose: Optional[str] = None

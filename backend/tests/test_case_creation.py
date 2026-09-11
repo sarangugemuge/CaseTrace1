@@ -87,4 +87,21 @@ def test_create_case_unauthorized_user(client):
     }
     response = client.post("/api/cases", json=payload, headers=headers)
     assert response.status_code == 403
-    assert "Only Senior Officers and Admins are authorized" in response.json()["detail"]
+    assert "not authorized to record new incidents" in response.json()["detail"]
+
+def test_create_case_valid_investigating_officer(client):
+    headers = {"X-User-Role": "Investigating Officer", "X-User-Id": "usr-002"}
+    payload = {
+        "case_number": "CASE-2026-9904",
+        "title": "Ransomware Infiltration Investigation",
+        "description": "Critical infrastructure investigation by Cyber Crime Investigating Officer.",
+        "department": "Cyber Crime Division",
+        "incident_date": "2026-05-14",
+        "priority": "HIGH",
+        "classification": "CONFIDENTIAL",
+        "lead_investigator": "Insp. Sarah Jenkins"
+    }
+    response = client.post("/api/cases", json=payload, headers=headers)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["case_number"] == "CASE-2026-9904"

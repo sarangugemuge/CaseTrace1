@@ -20,6 +20,8 @@ class DocumentModel(Base):
     allowed_roles = Column(JSON, nullable=True, default=list)
     allowed_purposes = Column(JSON, nullable=True, default=list)
     integrity_status = Column(String, default="VERIFIED")
+    description = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
 
     # Phase 6 Storage Metadata Fields
     storage_key = Column(String, nullable=True, index=True)

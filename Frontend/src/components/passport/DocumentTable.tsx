@@ -30,6 +30,8 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
   const [category, setCategory] = useState<string>('EVIDENCE');
   const [sensitivity, setSensitivity] = useState<string>('CONFIDENTIAL');
   const [purpose, setPurpose] = useState<string>('INVESTIGATION');
+  const [description, setDescription] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
@@ -45,9 +47,20 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
     setUploadMessage(null);
 
     try {
-      await apiClient.uploadDocument(caseData.caseId, selectedFile, category, sensitivity, purpose);
+      await apiClient.uploadDocument(
+        caseData.caseId,
+        selectedFile,
+        category,
+        sensitivity,
+        purpose,
+        undefined,
+        description.trim() || undefined,
+        notes.trim() || undefined
+      );
       setUploadMessage({ type: 'success', text: `Document '${selectedFile.name}' uploaded securely to S3 storage.` });
       setSelectedFile(null);
+      setDescription('');
+      setNotes('');
       setTimeout(() => {
         setUploadModalOpen(false);
         setUploadMessage(null);
@@ -225,12 +238,38 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                 className="w-full p-2 bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-navy-700 rounded text-slate-900 dark:text-white"
               >
                 <option value="PUBLIC">PUBLIC</option>
-                <option value="RESTRICTED">RESTRICTED</option>
+                <option value="INTERNAL">INTERNAL</option>
                 <option value="CONFIDENTIAL">CONFIDENTIAL</option>
                 <option value="TOP_SECRET">TOP SECRET</option>
                 <option value="FORENSIC">FORENSIC</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider mb-1">
+              Description (Optional)
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Memory dump artifact from workstation WS-04"
+              className="w-full p-2 bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-navy-700 rounded text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider mb-1">
+              Chain of Custody Notes (Optional)
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Tamper-evident evidence seal #AZ-9921 intact upon receipt."
+              rows={2}
+              className="w-full p-2 bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-navy-700 rounded text-slate-900 dark:text-white"
+            />
           </div>
 
           <div>

@@ -27,8 +27,10 @@ export interface DocumentVersion {
   uploadedAt: string;
   uploadedBy: string;
   sha256Hash: string;
+  previousHash?: string;
   fileSize: string;
   changeSummary: string;
+  changeReason?: string;
 }
 
 export interface Document {
@@ -52,4 +54,6 @@ export interface Document {
   fileSize?: number;
   mimeType?: string;
   originalFilename?: string;
+  description?: string;
+  notes?: string;
 }

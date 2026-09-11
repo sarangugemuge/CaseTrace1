@@ -7,6 +7,7 @@ import { caseService } from '../../../../services/caseService';
 import { apiClient } from '../../../../lib/apiClient';
 import { accessControlEngine } from '../../../../services/accessControlEngine';
 import { Document } from '../../../../types/document';
+import { CasePassport } from '../../../../types/case';
 import { CaseHeader } from '../../../../components/passport/CaseHeader';
 import { DocumentTable } from '../../../../components/passport/DocumentTable';
 import { DocumentDetailModal } from '../../../../components/passport/DocumentDetailModal';
@@ -41,7 +42,8 @@ export default function CasePassportDetailPage() {
   const validTabs = ['overview', 'documents', 'evidence', 'people', 'timeline', 'integrity', 'security'];
 
   const { currentUser } = useAuth();
-  const caseData = caseService.getCaseById(caseId);
+  const [caseData, setCaseData] = useState<CasePassport | null>(() => caseService.getCaseById(caseId) || null);
+  const [loadingCase, setLoadingCase] = useState(!caseData);
 
   const [activeTab, setActiveTab] = useState<
     'overview' | 'documents' | 'evidence' | 'people' | 'timeline' | 'integrity' | 'security'
@@ -52,6 +54,26 @@ export default function CasePassportDetailPage() {
       setActiveTab(tabParam as any);
     }
   }, [tabParam]);
+
+  const loadCase = useCallback(async () => {
+    if (!caseId) return;
+    try {
+      const fetched = await apiClient.getCaseById(caseId);
+      if (fetched) {
+        setCaseData(fetched);
+      }
+    } catch (err) {
+      console.warn('Could not load case from apiClient, using local store:', err);
+      const local = caseService.getCaseById(caseId);
+      if (local) setCaseData(local);
+    } finally {
+      setLoadingCase(false);
+    }
+  }, [caseId]);
+
+  useEffect(() => {
+    loadCase();
+  }, [loadCase]);
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loadingDocs, setLoadingDocs] = useState<boolean>(true);
@@ -76,6 +98,10 @@ export default function CasePassportDetailPage() {
   }, [loadDocuments]);
 
   if (!currentUser) return null;
+
+  if (loadingCase && !caseData) {
+    return <LoadingState message="Loading Case Passport registry..." />;
+  }
 
   if (!caseData) {
     return (
@@ -125,7 +151,10 @@ export default function CasePassportDetailPage() {
   return (
     <div className="space-y-6">
       {/* Case Passport Flagship Header */}
-      <CaseHeader caseData={caseData} />
+      <CaseHeader
+        caseData={caseData}
+        onCaseUpdated={(updated) => setCaseData(updated)}
+      />
 
       {/* Navigation Tabs */}
       <div className="border-b border-slate-200 dark:border-slate-800 flex flex-wrap gap-2 font-mono text-xs overflow-x-auto">
@@ -204,6 +233,7 @@ export default function CasePassportDetailPage() {
         document={selectedDoc}
         caseData={caseData}
         user={currentUser}
+        onDocumentUpdated={() => loadDocuments()}
       />
     </div>
   );

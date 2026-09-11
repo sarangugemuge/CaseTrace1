@@ -30,11 +30,11 @@ def test_rbac_case_creation(client):
     res_admin = client.post("/api/cases", json=payload_admin, headers={"X-User-Role": "Admin", "X-User-Id": "usr-007"})
     assert res_admin.status_code == 201
 
-    # 3. Case Creation: Investigating Officer (Denied 403)
+    # 3. Case Creation: Investigating Officer (Allowed 201)
     payload_io = {
         "case_number": "CASE-2026-9003",
-        "title": "Unauthorized Case Creation Attempt",
-        "description": "Investigating Officer attempted case creation",
+        "title": "Investigating Officer Incident Intake",
+        "description": "Investigating Officer authorized case creation",
         "incident_date": "2026-03-03",
         "priority": "MEDIUM",
         "classification": "CONFIDENTIAL",
@@ -42,11 +42,24 @@ def test_rbac_case_creation(client):
         "lead_investigator": "Insp. Sarah Jenkins"
     }
     res_io = client.post("/api/cases", json=payload_io, headers={"X-User-Role": "Investigating Officer", "X-User-Id": "usr-002"})
-    assert res_io.status_code == 403
-    assert "Only Senior Officers and Admins are authorized" in res_io.json()["detail"]
+    assert res_io.status_code == 201
 
-    # 4. Case Creation: Court User (Denied 403)
-    res_court = client.post("/api/cases", json=payload_io, headers={"X-User-Role": "Court User", "X-User-Id": "usr-005"})
+    # 4. Case Creation: Forensic Officer (Denied 403)
+    payload_fo = {
+        "case_number": "CASE-2026-9004",
+        "title": "Unauthorized Case Creation Attempt",
+        "description": "Forensic Officer attempted case creation",
+        "incident_date": "2026-03-04",
+        "priority": "LOW",
+        "classification": "RESTRICTED",
+        "department": "Digital Forensics Lab",
+        "lead_investigator": "Dr. Alex Mercer"
+    }
+    res_fo = client.post("/api/cases", json=payload_fo, headers={"X-User-Role": "Forensic Officer", "X-User-Id": "usr-003"})
+    assert res_fo.status_code == 403
+
+    # 5. Case Creation: Court User (Denied 403)
+    res_court = client.post("/api/cases", json=payload_fo, headers={"X-User-Role": "Court User", "X-User-Id": "usr-005"})
     assert res_court.status_code == 403
 
 
@@ -185,16 +198,24 @@ def test_rbac_administrative_operations(client):
     res_del_court = client.delete("/api/documents/doc-101", headers={"X-User-Role": "Court User", "X-User-Id": "usr-005"})
     assert res_del_court.status_code == 403
 
-    # 3. Investigating Officer attempting to update case properties (Denied 403)
+    # 3. Investigating Officer attempting to update UNASSIGNED case properties (Denied 403)
     res_upd_io = client.put(
-        "/api/cases/CASE-2026-8942",
+        "/api/cases/CASE-2026-4410",
         json={"title": "Unauthorized Title Tamper Attempt"},
         headers={"X-User-Role": "Investigating Officer", "X-User-Id": "usr-002"}
     )
     assert res_upd_io.status_code == 403
-    assert "Only Senior Officers and Admins are authorized to update" in res_upd_io.json()["detail"]
+    assert "not authorized to edit case" in res_upd_io.json()["detail"]
 
-    # 4. Senior Officer updating case properties (Allowed 200)
+    # 4. Forensic Officer attempting to update case properties (Denied 403)
+    res_upd_fo = client.put(
+        "/api/cases/CASE-2026-8942",
+        json={"title": "Unauthorized Forensic Title Tamper Attempt"},
+        headers={"X-User-Role": "Forensic Officer", "X-User-Id": "usr-003"}
+    )
+    assert res_upd_fo.status_code == 403
+
+    # 5. Senior Officer updating case properties (Allowed 200)
     res_upd_so = client.put(
         "/api/cases/CASE-2026-8942",
         json={"title": "Operation DarkLedge: Authoritative Financial Investigation"},

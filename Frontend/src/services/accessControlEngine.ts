@@ -122,6 +122,10 @@ export const accessControlEngine = {
   },
 
   canCreateCase(user: User): boolean {
-    return user.role === 'Senior Officer' || user.role === 'Admin';
+    return (
+      user.role === 'Senior Officer' ||
+      user.role === 'Investigating Officer' ||
+      user.role === 'Admin'
+    );
   },
 };

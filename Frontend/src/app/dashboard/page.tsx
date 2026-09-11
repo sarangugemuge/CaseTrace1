@@ -7,11 +7,13 @@ import { apiClient } from '../../lib/apiClient';
 import { caseService } from '../../services/caseService';
 import { auditService } from '../../services/auditService';
 import { riskEngine } from '../../services/riskEngine';
+import { accessControlEngine } from '../../services/accessControlEngine';
+import { getRoleLabel } from '../../lib/roles';
 import { CasePassport } from '../../types/case';
 import { DashboardStats } from '../../types/security';
 import { SensitivityBadge } from '../../components/common/Badge';
+import { CreateCaseModal } from '../../components/passport/CreateCaseModal';
 import {
-  BackendUnavailableBanner,
   EmptyState,
   LoadingState,
 } from '../../components/common/UXStates';
@@ -24,12 +26,10 @@ import {
   Lock,
   RefreshCw,
   AlertCircle,
-  CheckCircle2,
-  XCircle,
-  ShieldCheck,
   Shield,
+  Plus,
+  Clock,
 } from 'lucide-react';
-import { ROLE_PERMISSIONS } from '../../types/rolePermissions';
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const [cases, setCases] = useState<CasePassport[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isLive, setIsLive] = useState<boolean>(true);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentUser) return;
@@ -50,15 +50,12 @@ export default function DashboardPage() {
       ]);
       setStats(fetchedStats);
       setCases(fetchedCases);
-      setIsLive(true);
     } catch (err: any) {
-      console.warn('Dashboard loading error, falling back to local service cache:', err);
       try {
         const fallbackCases = caseService.getCasesForUser(currentUser);
         setCases(fallbackCases);
-        setIsLive(false);
       } catch (fallbackErr) {
-        setError('Failed to load dashboard telemetry.');
+        setError('Failed to load dashboard data.');
       }
     } finally {
       setLoading(false);
@@ -71,13 +68,14 @@ export default function DashboardPage() {
 
   if (!currentUser) return null;
 
-  // Fallback calculations if stats not yet loaded
-  const displayCasesCount = stats?.totalAuthorizedCases ?? cases.length;
-  const displayAlertsCount = stats?.integrityAlerts ?? riskEngine.getMockAlerts().length;
-  const displayAnchorsText = stats && stats.pendingVerification > 0 ? `${stats.pendingVerification} PENDING` : '100%';
-  const displayAnchorsSub = stats && stats.pendingVerification > 0 ? 'Pending ledger anchor' : 'Hashes bit-exact matched';
+  const canCreate = accessControlEngine.canCreateCase(currentUser);
+  const displayRole = getRoleLabel(currentUser.role);
 
-  // Activity list: prefer stats.recentActivity, fallback to auditService
+  const displayCasesCount = stats?.totalAuthorizedCases ?? cases.length;
+  const displayAlertsCount = stats?.integrityAlerts ?? 0;
+  const displayAnchorsText = stats && stats.pendingVerification > 0 ? `${stats.pendingVerification} PENDING` : '100%';
+  const displayAnchorsSub = stats && stats.pendingVerification > 0 ? 'Pending verification' : 'Digests verified bit-exact';
+
   const activities = stats?.recentActivity && stats.recentActivity.length > 0
     ? stats.recentActivity.slice(0, 6)
     : auditService.getLogs().slice(0, 5).map((log) => ({
@@ -94,142 +92,66 @@ export default function DashboardPage() {
         description: log.description,
       }));
 
+  const handleCaseCreated = (newCase: CasePassport) => {
+    setCases((prev) => [newCase, ...prev.filter((c) => c.caseId !== newCase.caseId)]);
+    loadData();
+  };
+
   return (
     <div className="space-y-6">
-      {/* Command & Control Header */}
-      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-6 shadow-card flex flex-wrap items-center justify-between gap-4 transition-colors">
+      {/* Dashboard Command Header */}
+      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-6 shadow-sm flex flex-wrap items-center justify-between gap-4 transition-colors">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
-            <span>ACTIVE PERSONA:</span>
-            <span className="text-blue-600 dark:text-blue-400 font-bold uppercase">{currentUser.name}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{currentUser.name}</span>
             <span>•</span>
-            <span className="text-emerald-700 dark:text-emerald-400 uppercase font-bold">{currentUser.role}</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold uppercase">{displayRole}</span>
             <span>•</span>
-            <span className={`inline-flex items-center gap-1 font-mono text-[10px] font-bold ${isLive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-              {isLive ? 'LIVE TELEMETRY' : 'OFFLINE CACHE'}
-            </span>
+            <span>{currentUser.department}</span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            CaseTrace Multi-Role Command Dashboard
+            CaseTrace Command Dashboard
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl font-sans">
-            Real-time Digital Case Passport status, role-based case assignments, and cryptographic verification metrics.
+            Centralized case passports, evidentiary integrity verification, and access governance.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={loadData}
-            aria-label="Refresh dashboard telemetry"
-            title="Refresh dashboard telemetry"
+            aria-label="Refresh dashboard data"
+            title="Refresh dashboard data"
             className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-navy-800 dark:hover:bg-navy-700 text-slate-600 dark:text-slate-300 rounded-lg transition-all"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
+
+          {canCreate && (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold rounded-lg flex items-center gap-2 transition-all shadow-sm shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Incident</span>
+            </button>
+          )}
+
           <Link
             href="/dashboard/cases"
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold rounded-lg flex items-center gap-2 transition-all shadow-md"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-navy-800 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 font-mono text-xs font-bold rounded-lg flex items-center gap-2 transition-all border border-slate-200 dark:border-slate-700"
           >
             <FolderLock className="w-4 h-4" />
-            Access Case Directory ({displayCasesCount})
+            <span>Case Directory ({displayCasesCount})</span>
           </Link>
         </div>
       </div>
 
-      {/* Backend Availability Banner when operating in fallback mode */}
-      {!isLive && (
-        <BackendUnavailableBanner onRetry={loadData} isRetrying={loading} />
-      )}
-
-      {/* Current Demo Role & Authoritative Permission Matrix */}
-      {ROLE_PERMISSIONS[currentUser.role] && (
-        <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 shadow-card space-y-4 transition-colors">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 dark:border-navy-800 pb-3.5">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded">
-                  <Shield className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                  DEMO MODE • PERSONA SIMULATION
-                </span>
-                <span className="text-xs font-mono text-slate-400 dark:text-slate-500">SIH 2026 EVALUATION CONTEXT</span>
-              </div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Current Demo Role:</span>
-                <span className="text-blue-600 dark:text-blue-400">{ROLE_PERMISSIONS[currentUser.role].role}</span>
-                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-mono">
-                  ({ROLE_PERMISSIONS[currentUser.role].personaName})
-                </span>
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-sans">
-                {ROLE_PERMISSIONS[currentUser.role].description}
-              </p>
-            </div>
-
-            <div className="flex flex-col items-start sm:items-end gap-1.5">
-              <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded border ${ROLE_PERMISSIONS[currentUser.role].badgeColor}`}>
-                {ROLE_PERMISSIONS[currentUser.role].clearanceLevel}
-              </span>
-              <span className="text-[10px] font-mono text-slate-400">
-                DEPT: {ROLE_PERMISSIONS[currentUser.role].department}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            {/* CAN Column */}
-            <div className="bg-emerald-50/40 dark:bg-navy-950 border border-emerald-200 dark:border-emerald-900/60 rounded-xl p-4 space-y-2.5">
-              <div className="flex items-center gap-2 font-mono font-bold text-emerald-800 dark:text-emerald-400 text-xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Can:</span>
-              </div>
-              <ul className="space-y-1.5 text-slate-700 dark:text-slate-300 font-sans text-xs">
-                {ROLE_PERMISSIONS[currentUser.role].can.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-emerald-600 dark:text-emerald-400 mt-0.5">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* CANNOT Column */}
-            <div className="bg-rose-50/40 dark:bg-navy-950 border border-rose-200 dark:border-rose-900/60 rounded-xl p-4 space-y-2.5">
-              <div className="flex items-center gap-2 font-mono font-bold text-rose-800 dark:text-rose-400 text-xs">
-                <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                <span>Cannot:</span>
-              </div>
-              <ul className="space-y-1.5 text-slate-700 dark:text-slate-300 font-sans text-xs">
-                {ROLE_PERMISSIONS[currentUser.role].cannot.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-rose-600 dark:text-rose-400 mt-0.5">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Authoritative Security Footnote */}
-          <div className="pt-2 border-t border-slate-100 dark:border-navy-850 flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400">
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>
-                Backend Security: Authorization is evaluated authoritatively per request by FastAPI RBAC services. The client UI is not the source of truth.
-              </span>
-            </div>
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hidden sm:inline">
-              FASTAPI 403 ENFORCED
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Error Notice if any */}
+      {/* Error Notice */}
       {error && (
         <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl p-4 flex items-center justify-between gap-3 text-rose-700 dark:text-rose-400 text-xs font-mono">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
             <span>{error}</span>
           </div>
           <button
@@ -241,13 +163,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Enterprise KPI Row */}
+      {/* Metric Cards Row */}
       {loading && !stats ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 shadow-subtle animate-pulse h-28"
+              className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 animate-pulse h-28"
             >
               <div className="h-3 w-28 bg-slate-200 dark:bg-navy-800 rounded mb-4" />
               <div className="h-7 w-16 bg-slate-200 dark:bg-navy-800 rounded mb-2" />
@@ -257,7 +179,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 shadow-subtle font-mono transition-colors">
+          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 font-mono shadow-xs transition-colors">
             <div className="text-slate-500 dark:text-slate-400 text-xs flex items-center justify-between font-bold uppercase">
               <span>AUTHORIZED CASES</span>
               <div className="w-8 h-8 rounded bg-blue-50 dark:bg-navy-800 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -265,12 +187,12 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{displayCasesCount}</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Role-cleared passports</div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Available under active clearance</div>
           </div>
 
-          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 shadow-subtle font-mono transition-colors">
+          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 font-mono shadow-xs transition-colors">
             <div className="text-slate-500 dark:text-slate-400 text-xs flex items-center justify-between font-bold uppercase">
-              <span>BLOCKCHAIN ANCHORS</span>
+              <span>INTEGRITY ANCHORS</span>
               <div className="w-8 h-8 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <FileCheck className="w-4 h-4" />
               </div>
@@ -279,7 +201,7 @@ export default function DashboardPage() {
             <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{displayAnchorsSub}</div>
           </div>
 
-          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 shadow-subtle font-mono transition-colors">
+          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 font-mono shadow-xs transition-colors">
             <div className="text-slate-500 dark:text-slate-400 text-xs flex items-center justify-between font-bold uppercase">
               <span>SECURITY ALERTS</span>
               <div className="w-8 h-8 rounded bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center">
@@ -287,28 +209,28 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">{displayAlertsCount}</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Cross-agency access flags</div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Security flags & access blocks</div>
           </div>
 
-          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 shadow-subtle font-mono transition-colors">
+          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-5 font-mono shadow-xs transition-colors">
             <div className="text-slate-500 dark:text-slate-400 text-xs flex items-center justify-between font-bold uppercase">
-              <span title="Role-Based Access Control: Access is controlled according to the user's role.">RBAC CLEARANCE</span>
+              <span>ROLE CLEARANCE</span>
               <div className="w-8 h-8 rounded bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                 <Lock className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-sm font-extrabold text-purple-700 dark:text-purple-300 mt-2 truncate uppercase">{currentUser.role}</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-sans">Access controlled by user role</div>
+            <div className="text-xs font-bold text-purple-700 dark:text-purple-300 mt-2 truncate uppercase">{displayRole}</div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-sans">Role-governed clearance tier</div>
           </div>
         </div>
       )}
 
       {/* Authorized Cases Preview Grid */}
-      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-6 shadow-card space-y-4 transition-colors">
+      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-6 shadow-sm space-y-4 transition-colors">
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-navy-800 pb-3">
           <h2 className="text-xs font-mono font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
             <FolderLock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            Authorized Digital Case Passports ({cases.length})
+            Active Digital Case Passports ({cases.length})
           </h2>
           <Link href="/dashboard/cases" className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
             View All Passports <ArrowRight className="w-3.5 h-3.5" />
@@ -318,14 +240,15 @@ export default function DashboardPage() {
         {loading && cases.length === 0 ? (
           <LoadingState
             message="Loading authorized case passports..."
-            description="Retrieving digital case passports and verifying cryptographic Genesis Anchors for your role clearance."
+            description="Retrieving digital case passports and verifying integrity status for your role clearance."
           />
         ) : cases.length === 0 ? (
           <EmptyState
             title="No Case Passports Assigned"
-            description={`No digital case passports are currently assigned or cleared for role: ${currentUser.role}. In this SIH evaluation demo, you can switch personas in the top navigation bar to inspect other cases.`}
-            actionText="View Case Directory"
-            actionHref="/dashboard/cases"
+            description={`No digital case passports are currently assigned or cleared for your account (${displayRole}).`}
+            actionText={canCreate ? "Add New Incident" : "View Case Directory"}
+            actionHref={canCreate ? undefined : "/dashboard/cases"}
+            onAction={canCreate ? () => setCreateModalOpen(true) : undefined}
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -355,66 +278,60 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Security Audit Trail Activity */}
-      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-6 shadow-card space-y-4 transition-colors">
+      {/* Recent Activity & Audit Events */}
+      <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-6 shadow-sm space-y-4 transition-colors">
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-navy-800 pb-3">
           <h2 className="text-xs font-mono font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            Recent Security Audit Trail Activity
+            <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            Recent Case & Custody Activity
           </h2>
-          <Link href="/dashboard/audit" className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:underline">
-            View Full Audit Stream →
+          <Link href="/dashboard/audit" className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+            View Audit Log <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        {activities.length === 0 ? (
-          <div className="p-8 text-center text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-navy-950 rounded-xl border border-slate-200 dark:border-navy-800">
-            No recent activity recorded for this clearance level.
-          </div>
-        ) : (
-          <div className="space-y-2 font-mono text-xs">
-            {activities.map((log) => {
-              const isHighRisk = log.result === 'DENIED' || log.riskLevel === 'HIGH' || log.riskLevel === 'CRITICAL';
-              const isVerification = log.action.includes('VERIF') || log.action.includes('ANCHOR');
-              const actionClass = isHighRisk
-                ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
-                : isVerification
-                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
-                : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 border border-blue-200 dark:border-blue-900';
-
-              return (
-                <div
-                  key={log.eventId}
-                  className="bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-800 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-slate-500 text-[10px]">
-                      {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : 'RECENT'}
-                    </span>
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      {log.userName || 'System'} ({log.role || 'Service'})
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${actionClass}`}>
-                      {log.action}
-                    </span>
-                    {log.caseId && (
-                      <Link
-                        href={`/dashboard/cases/${log.caseId}`}
-                        className="text-blue-600 dark:text-blue-400 font-bold hover:underline text-[11px]"
-                      >
-                        {log.caseNumber || log.caseId}
-                      </Link>
+        <div className="divide-y divide-slate-100 dark:divide-navy-800">
+          {activities.length === 0 ? (
+            <div className="py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+              No recent activity recorded.
+            </div>
+          ) : (
+            activities.map((act) => (
+              <div key={act.eventId} className="py-3 flex items-start justify-between gap-4 text-xs">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-2 font-mono">
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{act.action}</span>
+                    {act.caseNumber && (
+                      <span className="text-blue-600 dark:text-blue-400 font-semibold">{act.caseNumber}</span>
                     )}
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                      act.result === 'SUCCESS'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                        : 'bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                    }`}>
+                      {act.result}
+                    </span>
                   </div>
-                  <span className="text-slate-600 dark:text-slate-400 text-[11px] truncate max-w-md">
-                    {log.description}
-                  </span>
+                  <p className="text-slate-600 dark:text-slate-400 text-xs font-sans truncate">{act.description}</p>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <div className="text-right font-mono text-[10px] text-slate-400 shrink-0">
+                  <div>{act.userName}</div>
+                  <div>{new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
+
+      {/* Modal for Add New Incident */}
+      {canCreate && (
+        <CreateCaseModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onCaseCreated={handleCaseCreated}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ from backend.app.db.models.case import CaseModel
 from backend.app.db.models.document import DocumentModel
 from backend.app.db.models.audit import AuditLogModel
 from backend.app.db.models.access_record import AccessRecordModel
+from backend.app.db.models.role import RoleModel
 from backend.app.core.security import get_password_hash
 
 logger = logging.getLogger("casetrace.seed")
@@ -165,6 +166,55 @@ def seed_database(db=None):
                 risk_level="LOW", reason="Senior Officer granted full view clearance."
             )
             db.add(ar1)
+
+        # 6. Seed 7 System Roles (Admin Role Management)
+        if db.query(RoleModel).count() == 0:
+            logger.info("Seeding 7 CASETRACE system roles...")
+            roles = [
+                RoleModel(
+                    id="role-001", name="Senior Investigating Officer", role_key="Senior Officer",
+                    description="Senior law enforcement executive with incident creation, cross-department oversight, and full audit discovery.",
+                    permissions=["VIEW_CASES", "CREATE_CASES", "EDIT_CASES", "VIEW_EVIDENCE", "UPLOAD_EVIDENCE", "EDIT_EVIDENCE", "VERIFY_EVIDENCE", "VIEW_AUDIT"],
+                    is_active=True, is_system=True
+                ),
+                RoleModel(
+                    id="role-002", name="Cyber Crime Investigating Officer", role_key="Investigating Officer",
+                    description="Direct cyber investigator handling assigned incident investigation, evidence gathering, and case filing.",
+                    permissions=["VIEW_CASES", "CREATE_CASES", "EDIT_CASES", "VIEW_EVIDENCE", "UPLOAD_EVIDENCE", "EDIT_EVIDENCE", "VERIFY_EVIDENCE", "VIEW_AUDIT"],
+                    is_active=True, is_system=True
+                ),
+                RoleModel(
+                    id="role-003", name="Digital Forensics Officer", role_key="Forensic Officer",
+                    description="Forensic analyst authorized for bitstream acquisitions, memory forensics, and hash verification.",
+                    permissions=["VIEW_CASES", "VIEW_EVIDENCE", "UPLOAD_EVIDENCE", "EDIT_EVIDENCE", "VERIFY_EVIDENCE", "VIEW_AUDIT"],
+                    is_active=True, is_system=True
+                ),
+                RoleModel(
+                    id="role-004", name="Public Prosecutor", role_key="Prosecutor",
+                    description="Legal counsel reviewing trial exhibits, chain of custody admissibility, and legal filings.",
+                    permissions=["VIEW_CASES", "VIEW_EVIDENCE", "VERIFY_EVIDENCE", "VIEW_AUDIT"],
+                    is_active=True, is_system=True
+                ),
+                RoleModel(
+                    id="role-005", name="Judicial Officer", role_key="Court User",
+                    description="Judicial registry officer limited strictly to public docket filings and unsealed exhibits.",
+                    permissions=["VIEW_CASES", "VIEW_EVIDENCE", "VERIFY_EVIDENCE"],
+                    is_active=True, is_system=True
+                ),
+                RoleModel(
+                    id="role-006", name="Security & Audit Officer", role_key="Auditor / Security",
+                    description="Independent oversight auditor monitoring RBAC compliance, policy violations, and tamper alerts.",
+                    permissions=["VIEW_CASES", "VIEW_EVIDENCE", "VERIFY_EVIDENCE", "VIEW_AUDIT"],
+                    is_active=True, is_system=True
+                ),
+                RoleModel(
+                    id="role-007", name="System Administrator", role_key="Admin",
+                    description="System administrator responsible for infrastructure health, user governance, and security policy orchestration.",
+                    permissions=["VIEW_CASES", "CREATE_CASES", "EDIT_CASES", "VIEW_EVIDENCE", "UPLOAD_EVIDENCE", "EDIT_EVIDENCE", "VERIFY_EVIDENCE", "VIEW_AUDIT", "MANAGE_ROLES", "SYSTEM_CONFIG"],
+                    is_active=True, is_system=True
+                ),
+            ]
+            db.add_all(roles)
 
         db.commit()
         logger.info("CASETRACE seed completed successfully.")

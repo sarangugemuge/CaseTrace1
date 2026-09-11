@@ -31,6 +31,14 @@ class DocumentBase(BaseModel):
     file_size: Optional[int] = 0
     mime_type: Optional[str] = "application/octet-stream"
     original_filename: Optional[str] = None
+    description: Optional[str] = None
+    notes: Optional[str] = None
+
+class DocumentMetadataUpdate(BaseModel):
+    category: Optional[str] = None
+    sensitivity: Optional[str] = None
+    description: Optional[str] = None
+    notes: Optional[str] = None
 
 class DocumentResponse(DocumentBase):
     model_config = ConfigDict(from_attributes=True)

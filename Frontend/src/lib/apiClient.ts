@@ -5,6 +5,7 @@ import { AuditEntry, AuditSummary } from '../types/audit';
 import { NotificationItem } from '../types/notification';
 import { DashboardStats, DashboardActivity } from '../types/security';
 import { GlobalSearchResponse } from '../types/search';
+import { RoleRecord, SystemConfig } from '../types/admin';
 import { authService } from '../services/authService';
 import { caseService } from '../services/caseService';
 import { auditService } from '../services/auditService';
@@ -25,12 +26,14 @@ function transformDocument(raw: any): Document {
     sensitivity: raw.sensitivity || 'CONFIDENTIAL',
     version: raw.version ?? 1,
     versionHistory: (raw.versionHistory || raw.version_history || []).map((v: any) => ({
-      versionNumber: v.versionNumber ?? v.version_number ?? 1,
+      versionNumber: v.versionNumber ?? v.version_number ?? v.version ?? 1,
       uploadedAt: v.uploadedAt || v.uploaded_at || '',
       uploadedBy: v.uploadedBy || v.uploaded_by || '',
       sha256Hash: v.sha256Hash || v.sha256_hash || '',
+      previousHash: v.previousHash || v.previous_hash,
       fileSize: v.fileSize || v.file_size || '',
-      changeSummary: v.changeSummary || v.change_summary || '',
+      changeSummary: v.changeSummary || v.change_summary || v.changeReason || v.change_reason || '',
+      changeReason: v.changeReason || v.change_reason || v.changeSummary || v.change_summary || '',
     })),
     uploadedBy: raw.uploadedBy || raw.uploaded_by || 'Unknown Officer',
     uploadedAt: raw.uploadedAt || (raw.uploaded_at ? new Date(raw.uploaded_at).toISOString() : new Date().toISOString()),
@@ -44,6 +47,8 @@ function transformDocument(raw: any): Document {
     fileSize: raw.fileSize ?? raw.file_size ?? 0,
     mimeType: raw.mimeType || raw.mime_type || 'application/octet-stream',
     originalFilename: raw.originalFilename || raw.original_filename || raw.name,
+    description: raw.description,
+    notes: raw.notes,
   };
 }
 
@@ -289,6 +294,40 @@ export const apiClient = {
     }
   },
 
+  async updateCase(caseId: string, caseData: Partial<CasePassport>): Promise<CasePassport> {
+    const currentUser = authService.getCurrentUser();
+    const payload: Record<string, any> = {};
+    if (caseData.title !== undefined) payload.title = caseData.title;
+    if (caseData.description !== undefined) payload.description = caseData.description;
+    if (caseData.department !== undefined) payload.department = caseData.department;
+    if (caseData.incidentDate !== undefined) payload.incident_date = caseData.incidentDate;
+    if (caseData.priority !== undefined) payload.priority = caseData.priority;
+    if (caseData.classification !== undefined) payload.classification = caseData.classification;
+    if (caseData.leadInvestigator !== undefined) payload.lead_investigator = caseData.leadInvestigator;
+    if (caseData.status !== undefined) payload.status = caseData.status;
+    if (caseData.caseStage !== undefined) payload.case_stage = caseData.caseStage;
+    if (caseData.victims !== undefined) payload.victims = caseData.victims;
+    if (caseData.suspects !== undefined) payload.suspects = caseData.suspects;
+
+    const res = await fetch(`${API_BASE_URL}/api/cases/${caseId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(errJson.detail || `Update failed with status ${res.status}`);
+    }
+
+    const data = await res.json();
+    return transformCase(data);
+  },
+
   async getCaseDocuments(caseId: string): Promise<Document[]> {
     const res = await fetchWithFallback<any[]>(
       `/api/cases/${caseId}/documents`,
@@ -304,7 +343,9 @@ export const apiClient = {
     category: string = 'EVIDENCE',
     sensitivity: string = 'CONFIDENTIAL',
     purpose: string = 'INVESTIGATION',
-    evidenceId?: string
+    evidenceId?: string,
+    description?: string,
+    notes?: string
   ): Promise<Document> {
     const formData = new FormData();
     formData.append('file', file);
@@ -313,6 +354,12 @@ export const apiClient = {
     formData.append('purpose', purpose);
     if (evidenceId) {
       formData.append('evidence_id', evidenceId);
+    }
+    if (description) {
+      formData.append('description', description);
+    }
+    if (notes) {
+      formData.append('notes', notes);
     }
 
     const res = await fetchWithFallback<any>(
@@ -391,6 +438,164 @@ export const apiClient = {
       { method: 'DELETE' },
       () => ({ status: 'success', message: `Document ${documentId} deleted in mock mode.` })
     );
+  },
+
+  async addDocumentVersion(
+    documentId: string,
+    file: File,
+    changeReason: string,
+    purpose: string = 'INVESTIGATION'
+  ): Promise<Document> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('change_reason', changeReason);
+    formData.append('purpose', purpose);
+
+    const currentUser = authService.getCurrentUser();
+    const res = await fetch(`${API_BASE_URL}/api/documents/${documentId}/versions`, {
+      method: 'POST',
+      headers: {
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(errJson.detail || `Upload failed with status ${res.status}`);
+    }
+
+    const data = await res.json();
+    return transformDocument(data);
+  },
+
+  async updateDocumentMetadata(
+    documentId: string,
+    updates: { category?: string; sensitivity?: string; description?: string; notes?: string },
+    purpose: string = 'INVESTIGATION'
+  ): Promise<Document> {
+    const currentUser = authService.getCurrentUser();
+    const res = await fetch(`${API_BASE_URL}/api/documents/${documentId}/metadata?purpose=${encodeURIComponent(purpose)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+      body: JSON.stringify(updates),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(errJson.detail || `Update failed with status ${res.status}`);
+    }
+
+    const data = await res.json();
+    return transformDocument(data);
+  },
+
+  getDocumentViewUrl(documentId: string): string {
+    return `${API_BASE_URL}/api/documents/${documentId}/view?purpose=VIEW`;
+  },
+
+  async getAdminRoles(): Promise<RoleRecord[]> {
+    const currentUser = authService.getCurrentUser();
+    const res = await fetch(`${API_BASE_URL}/api/admin/roles`, {
+      headers: {
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(err.detail || `Failed to fetch roles (${res.status})`);
+    }
+    return res.json();
+  },
+
+  async createAdminRole(roleData: { name: string; role_key: string; description?: string; permissions: string[] }): Promise<RoleRecord> {
+    const currentUser = authService.getCurrentUser();
+    const res = await fetch(`${API_BASE_URL}/api/admin/roles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+      body: JSON.stringify(roleData),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(err.detail || `Failed to create role (${res.status})`);
+    }
+    return res.json();
+  },
+
+  async updateAdminRole(roleId: string, roleData: { name?: string; description?: string; permissions?: string[]; is_active?: boolean }): Promise<RoleRecord> {
+    const currentUser = authService.getCurrentUser();
+    const res = await fetch(`${API_BASE_URL}/api/admin/roles/${roleId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+      body: JSON.stringify(roleData),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(err.detail || `Failed to update role (${res.status})`);
+    }
+    return res.json();
+  },
+
+  async deleteAdminRole(roleId: string): Promise<void> {
+    const currentUser = authService.getCurrentUser();
+    const res = await fetch(`${API_BASE_URL}/api/admin/roles/${roleId}`, {
+      method: 'DELETE',
+      headers: {
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(err.detail || `Failed to delete role (${res.status})`);
+    }
+  },
+
+  async getAdminConfig(): Promise<SystemConfig> {
+    const currentUser = authService.getCurrentUser();
+    const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
+      headers: {
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(err.detail || `Failed to fetch system config (${res.status})`);
+    }
+    return res.json();
+  },
+
+  async updateAdminConfig(configData: Partial<SystemConfig>): Promise<SystemConfig> {
+    const currentUser = authService.getCurrentUser();
+    const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
+      },
+      body: JSON.stringify(configData),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(err.detail || `Failed to update system config (${res.status})`);
+    }
+    return res.json();
   },
 
   async getAuditLogs(): Promise<AuditEntry[]> {

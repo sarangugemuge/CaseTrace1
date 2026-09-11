@@ -13,7 +13,6 @@ import {
   AlertCircle,
   ArrowRight,
   Sparkles,
-  Lock,
 } from 'lucide-react';
 
 interface CreateCaseModalProps {
@@ -22,13 +21,24 @@ interface CreateCaseModalProps {
   onCaseCreated?: (newCase: CasePassport) => void;
 }
 
-const DEPARTMENTS = [
-  'Financial Crimes Division',
-  'Digital Forensics Lab',
-  'Cyber Warfare & Infrastructure Protection',
-  'Narcotics & Tactical Taskforce',
-  'Executive Crime Command',
-  'Internal Affairs & Oversight',
+const INCIDENT_CATEGORIES = [
+  'Financial Fraud & Wire Syndicate',
+  'Ransomware & System Extortion',
+  'Data Theft & Exfiltration',
+  'Critical Infrastructure Intrusion',
+  'Identity Theft & Impersonation',
+  'Narcotics & Contraband Smuggling',
+  'Cyber Warfare & State-Sponsored APT',
+  'General Cyber Crime Investigation',
+];
+
+const JURISDICTIONS = [
+  'Central Cyber Crime Branch, New Delhi',
+  'Cyber & Financial Investigation Division, Mumbai',
+  'Cyber Forensic Command, Bengaluru',
+  'Cyber Crime Police Station, Hyderabad',
+  'Economic Offences Wing, Chennai',
+  'State Special Operations Group, Kolkata',
 ];
 
 export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
@@ -46,29 +56,34 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
   const [caseNumber, setCaseNumber] = useState('');
   const [title, setTitle] = useState('');
+  const [incidentCategory, setIncidentCategory] = useState(INCIDENT_CATEGORIES[0]);
   const [description, setDescription] = useState('');
-  const [department, setDepartment] = useState(DEPARTMENTS[0]);
+  const [department, setDepartment] = useState(JURISDICTIONS[0]);
   const [incidentDate, setIncidentDate] = useState(todayStr);
+  const [incidentTime, setIncidentTime] = useState('10:30');
   const [priority, setPriority] = useState<CasePriority>('HIGH');
   const [classification, setClassification] = useState<CaseClassification>('CONFIDENTIAL');
   const [leadInvestigator, setLeadInvestigator] = useState('');
+  const [assignedTeam, setAssignedTeam] = useState('Cyber Investigation Team Alpha');
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [createdCase, setCreatedCase] = useState<CasePassport | null>(null);
 
-  // Initialize form defaults on open
   useEffect(() => {
     if (isOpen) {
       setCaseNumber(getSuggestedCaseNumber());
       setTitle('');
+      setIncidentCategory(INCIDENT_CATEGORIES[0]);
       setDescription('');
-      setDepartment(DEPARTMENTS[0]);
+      setDepartment(JURISDICTIONS[0]);
       setIncidentDate(todayStr);
+      setIncidentTime('10:30');
       setPriority('HIGH');
       setClassification('CONFIDENTIAL');
-      setLeadInvestigator(currentUser?.name || 'Cmdr. Robert Vance');
+      setLeadInvestigator(currentUser?.name || 'Insp. Sarah Jenkins');
+      setAssignedTeam('Cyber Investigation Team Alpha');
       setValidationErrors({});
       setServerError(null);
       setCreatedCase(null);
@@ -87,17 +102,17 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      errors.title = 'Case title is required.';
+      errors.title = 'Incident title is required.';
     } else if (trimmedTitle.length < 3) {
       errors.title = 'Title must be at least 3 characters long.';
     }
 
     if (!description.trim()) {
-      errors.description = 'Case summary/description is required.';
+      errors.description = 'Incident description is required.';
     }
 
     if (!department.trim()) {
-      errors.department = 'Department is required.';
+      errors.department = 'Jurisdiction / department is required.';
     }
 
     if (!incidentDate) {
@@ -107,7 +122,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     }
 
     if (!leadInvestigator.trim()) {
-      errors.leadInvestigator = 'Lead Investigator name is required.';
+      errors.leadInvestigator = 'Lead Investigating Officer name is required.';
     }
 
     setValidationErrors(errors);
@@ -126,7 +141,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
         caseNumber: caseNumber.trim().toUpperCase(),
         caseId: caseNumber.trim().toUpperCase(),
         title: title.trim(),
-        description: description.trim(),
+        description: `${description.trim()}\n\n[Category: ${incidentCategory} | Time: ${incidentTime} | Assigned Team: ${assignedTeam}]`,
         department: department.trim(),
         incidentDate,
         priority,
@@ -142,8 +157,8 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
         onCaseCreated(newCase);
       }
     } catch (err: any) {
-      console.error('Case creation failed:', err);
-      const msg = err.message || 'Failed to initialize digital case passport.';
+      console.error('Incident creation failed:', err);
+      const msg = err.message || 'Failed to record incident and initialize passport.';
       setServerError(msg);
 
       if (msg.toLowerCase().includes('already exists')) {
@@ -168,7 +183,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Initialize Digital Case Passport"
+      title="Add New Incident & Initialize Case Passport"
       maxWidth="max-w-2xl"
     >
       {createdCase ? (
@@ -183,7 +198,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 Digital Case Passport Initialized
               </h4>
               <p className="text-xs text-slate-600 dark:text-slate-300 font-sans">
-                Passport record immutably created and anchored to the security ledger with Genesis verification seal.
+                Incident record created, cryptographic SHA-256 integrity anchor registered, and audit event logged.
               </p>
             </div>
           </div>
@@ -194,7 +209,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               <span className="font-bold text-blue-600 dark:text-blue-400">{createdCase.caseNumber}</span>
             </div>
             <div className="flex justify-between border-b border-slate-200 dark:border-navy-800 pb-2">
-              <span className="text-slate-500">TITLE:</span>
+              <span className="text-slate-500">INCIDENT TITLE:</span>
               <span className="font-bold text-slate-900 dark:text-white max-w-sm text-right truncate">
                 {createdCase.title}
               </span>
@@ -208,7 +223,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               <span className="font-bold text-slate-900 dark:text-slate-200">{createdCase.leadInvestigator}</span>
             </div>
             <div className="space-y-1 pt-1">
-              <span className="text-slate-500 text-[11px]">BLOCKCHAIN GENESIS ANCHOR:</span>
+              <span className="text-slate-500 text-[11px]">INTEGRITY ANCHOR:</span>
               <div className="p-2 bg-white dark:bg-navy-900 rounded border border-slate-200 dark:border-navy-800 text-[11px] text-emerald-600 dark:text-emerald-400 break-all select-all font-mono">
                 {createdCase.blockchainAnchorId}
               </div>
@@ -228,51 +243,47 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               onClick={handleNavigateToNewCase}
               className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold rounded-lg flex items-center gap-2 transition-all shadow-md"
             >
-              Inspect New Passport
+              Open Digital Case Passport
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       ) : (
-        /* Case Creation Form */
-        <form onSubmit={handleSubmit} className="space-y-5 font-mono text-xs">
-          {/* Security Banner */}
+        /* Incident Creation Form */
+        <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
           <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 p-3 rounded-lg flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             <div className="text-[11px] text-blue-900 dark:text-blue-200">
-              <p className="font-bold">Authoritative Passport Registration</p>
+              <p className="font-bold">Official Incident Intake & Passport Creation</p>
               <p className="text-slate-600 dark:text-slate-300 mt-0.5 font-sans">
-                Initializing a new digital case passport automatically stamps a cryptographic SHA-256 genesis anchor and logs your active clearance in the immutable chain of custody. Creates an initial tamper-evident fingerprint for this case record that cannot be secretly altered.
+                Initializing a new Digital Case Passport records the incident facts, creates a cryptographic Genesis hash, and initiates the immutable chain-of-custody audit log.
               </p>
             </div>
           </div>
 
-          {/* Server Error Alert */}
           {serverError && (
             <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 p-3 rounded-lg flex items-start gap-2.5 text-rose-700 dark:text-rose-400" role="alert">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <div className="text-[11px]">
-                <span className="font-bold">Creation Error: </span>
+                <span className="font-bold">Intake Error: </span>
                 <span>{serverError}</span>
               </div>
             </div>
           )}
 
-          {/* Two-Column Grid */}
+          {/* Row 1: Case Number & Incident Category */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Case Number */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label htmlFor="create-case-number" className="text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px]">
-                  Case Number <span className="text-rose-500">*</span>
+                  Case / Incident ID <span className="text-rose-500">*</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => setCaseNumber(getSuggestedCaseNumber())}
-                  className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 focus:outline-hidden focus:ring-1 focus:ring-blue-500 rounded"
-                  aria-label="Auto-suggest a randomized case passport number"
+                  className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 focus:outline-hidden rounded"
                 >
-                  <Sparkles className="w-3 h-3" /> Auto-Suggest
+                  <Sparkles className="w-3 h-3" /> Auto-Generate
                 </button>
               </div>
               <input
@@ -280,29 +291,84 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 type="text"
                 placeholder="CASE-2026-XXXX"
                 value={caseNumber}
-                aria-required="true"
-                aria-invalid={!!validationErrors.caseNumber}
-                aria-describedby={validationErrors.caseNumber ? "case-number-error" : undefined}
                 onChange={(e) => {
                   setCaseNumber(e.target.value);
                   if (validationErrors.caseNumber) {
                     setValidationErrors((prev) => ({ ...prev, caseNumber: '' }));
                   }
                 }}
-                className={`w-full bg-slate-50 dark:bg-navy-950 border ${
-                  validationErrors.caseNumber
-                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                    : 'border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'
-                } rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 uppercase font-mono`}
+                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 uppercase font-mono"
               />
               {validationErrors.caseNumber && (
-                <p id="case-number-error" className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">
-                  {validationErrors.caseNumber}
-                </p>
+                <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">{validationErrors.caseNumber}</p>
               )}
             </div>
 
-            {/* Incident Date */}
+            <div>
+              <label htmlFor="create-case-category" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
+                Incident Category / Type <span className="text-rose-500">*</span>
+              </label>
+              <select
+                id="create-case-category"
+                value={incidentCategory}
+                onChange={(e) => setIncidentCategory(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-sans"
+              >
+                {INCIDENT_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Row 2: Incident Title */}
+          <div>
+            <label htmlFor="create-case-title" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
+              Incident Title / Operation Codename <span className="text-rose-500">*</span>
+            </label>
+            <input
+              id="create-case-title"
+              type="text"
+              placeholder="e.g. Operation CyberStrike Banking Malware Syndicate"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (validationErrors.title) {
+                  setValidationErrors((prev) => ({ ...prev, title: '' }));
+                }
+              }}
+              className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-sans"
+            />
+            {validationErrors.title && (
+              <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">{validationErrors.title}</p>
+            )}
+          </div>
+
+          {/* Row 3: Description */}
+          <div>
+            <label htmlFor="create-case-description" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
+              Incident Facts & Summary <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              id="create-case-description"
+              rows={3}
+              placeholder="Provide a factual summary of alleged offences, victims, suspected actors, and initial evidence gathered..."
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (validationErrors.description) {
+                  setValidationErrors((prev) => ({ ...prev, description: '' }));
+                }
+              }}
+              className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-sans leading-relaxed"
+            />
+            {validationErrors.description && (
+              <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">{validationErrors.description}</p>
+            )}
+          </div>
+
+          {/* Row 4: Date, Time & Jurisdiction */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label htmlFor="create-case-date" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
                 Incident Date <span className="text-rose-500">*</span>
@@ -312,148 +378,43 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 type="date"
                 max={todayStr}
                 value={incidentDate}
-                aria-required="true"
-                aria-invalid={!!validationErrors.incidentDate}
-                aria-describedby={validationErrors.incidentDate ? "incident-date-error" : undefined}
-                onChange={(e) => {
-                  setIncidentDate(e.target.value);
-                  if (validationErrors.incidentDate) {
-                    setValidationErrors((prev) => ({ ...prev, incidentDate: '' }));
-                  }
-                }}
-                className={`w-full bg-slate-50 dark:bg-navy-950 border ${
-                  validationErrors.incidentDate
-                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                    : 'border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'
-                } rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 font-mono`}
+                onChange={(e) => setIncidentDate(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-mono"
               />
-              {validationErrors.incidentDate && (
-                <p id="incident-date-error" className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">
-                  {validationErrors.incidentDate}
-                </p>
-              )}
             </div>
-          </div>
 
-          {/* Case Title */}
-          <div>
-            <label htmlFor="create-case-title" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
-              Case Title / Operation Codename <span className="text-rose-500">*</span>
-            </label>
-            <input
-              id="create-case-title"
-              type="text"
-              placeholder="e.g. Operation DarkLedge Financial Fraud"
-              value={title}
-              aria-required="true"
-              aria-invalid={!!validationErrors.title}
-              aria-describedby={validationErrors.title ? "case-title-error" : undefined}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                if (validationErrors.title) {
-                  setValidationErrors((prev) => ({ ...prev, title: '' }));
-                }
-              }}
-              className={`w-full bg-slate-50 dark:bg-navy-950 border ${
-                validationErrors.title
-                  ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                  : 'border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'
-              } rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 font-sans`}
-            />
-            {validationErrors.title && (
-              <p id="case-title-error" className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">
-                {validationErrors.title}
-              </p>
-            )}
-          </div>
+            <div>
+              <label htmlFor="create-case-time" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
+                Incident Time
+              </label>
+              <input
+                id="create-case-time"
+                type="time"
+                value={incidentTime}
+                onChange={(e) => setIncidentTime(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-mono"
+              />
+            </div>
 
-          {/* Description */}
-          <div>
-            <label htmlFor="create-case-description" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
-              Case Synopsis & Summary <span className="text-rose-500">*</span>
-            </label>
-            <textarea
-              id="create-case-description"
-              rows={3}
-              placeholder="Comprehensive summary of alleged offences, primary entities, and initial intelligence..."
-              value={description}
-              aria-required="true"
-              aria-invalid={!!validationErrors.description}
-              aria-describedby={validationErrors.description ? "case-desc-error" : undefined}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                if (validationErrors.description) {
-                  setValidationErrors((prev) => ({ ...prev, description: '' }));
-                }
-              }}
-              className={`w-full bg-slate-50 dark:bg-navy-950 border ${
-                validationErrors.description
-                  ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                  : 'border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'
-              } rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 font-sans leading-relaxed`}
-            />
-            {validationErrors.description && (
-              <p id="case-desc-error" className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">
-                {validationErrors.description}
-              </p>
-            )}
-          </div>
-
-          {/* Department & Lead Investigator */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="create-case-dept" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
-                Investigating Department <span className="text-rose-500">*</span>
+                Jurisdiction / Branch <span className="text-rose-500">*</span>
               </label>
               <select
                 id="create-case-dept"
                 value={department}
-                aria-required="true"
                 onChange={(e) => setDepartment(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-mono"
+                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-sans"
               >
-                {DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
+                {JURISDICTIONS.map((d) => (
+                  <option key={d} value={d}>{d}</option>
                 ))}
               </select>
             </div>
-
-            <div>
-              <label htmlFor="create-case-lead" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
-                Lead Investigator <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="create-case-lead"
-                type="text"
-                placeholder="e.g. Insp. Sarah Jenkins"
-                value={leadInvestigator}
-                aria-required="true"
-                aria-invalid={!!validationErrors.leadInvestigator}
-                aria-describedby={validationErrors.leadInvestigator ? "case-lead-error" : undefined}
-                onChange={(e) => {
-                  setLeadInvestigator(e.target.value);
-                  if (validationErrors.leadInvestigator) {
-                    setValidationErrors((prev) => ({ ...prev, leadInvestigator: '' }));
-                  }
-                }}
-                className={`w-full bg-slate-50 dark:bg-navy-950 border ${
-                  validationErrors.leadInvestigator
-                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                    : 'border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'
-                } rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 font-sans`}
-              />
-              {validationErrors.leadInvestigator && (
-                <p id="case-lead-error" className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">
-                  {validationErrors.leadInvestigator}
-                </p>
-              )}
-            </div>
           </div>
 
-          {/* Priority & Classification */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Row 5: Priority, Classification, Lead Investigator */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label htmlFor="create-case-priority" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
                 Priority Tier
@@ -462,33 +423,52 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 id="create-case-priority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as CasePriority)}
-                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-mono"
+                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-mono"
               >
-                <option value="CRITICAL">CRITICAL (Top-Level Interdiction)</option>
-                <option value="HIGH">HIGH (Standard Major Felony)</option>
-                <option value="MEDIUM">MEDIUM (Intermediate Inquiry)</option>
-                <option value="LOW">LOW (Administrative / Minor)</option>
+                <option value="CRITICAL">CRITICAL</option>
+                <option value="HIGH">HIGH</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="LOW">LOW</option>
               </select>
             </div>
 
             <div>
               <label htmlFor="create-case-classification" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
-                Security Classification
+                Sensitivity Classification
               </label>
               <select
                 id="create-case-classification"
                 value={classification}
                 onChange={(e) => setClassification(e.target.value as CaseClassification)}
-                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-mono"
+                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-mono"
               >
-                <option value="TOP_SECRET">TOP_SECRET (Strict compartmentalization)</option>
-                <option value="SECRET">SECRET (Protected criminal intelligence)</option>
-                <option value="CONFIDENTIAL">CONFIDENTIAL (Standard agency confidential)</option>
-                <option value="RESTRICTED">RESTRICTED (Controlled circulation)</option>
+                <option value="CONFIDENTIAL">CONFIDENTIAL</option>
+                <option value="TOP_SECRET">TOP_SECRET</option>
+                <option value="SECRET">SECRET</option>
+                <option value="RESTRICTED">RESTRICTED</option>
               </select>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-sans">
-                Access is controlled according to the user&apos;s role (RBAC) and security clearance tier.
-              </p>
+            </div>
+
+            <div>
+              <label htmlFor="create-case-lead" className="block text-slate-700 dark:text-slate-300 font-bold uppercase text-[11px] mb-1">
+                Lead Investigating Officer <span className="text-rose-500">*</span>
+              </label>
+              <input
+                id="create-case-lead"
+                type="text"
+                placeholder="e.g. Insp. Sarah Jenkins"
+                value={leadInvestigator}
+                onChange={(e) => {
+                  setLeadInvestigator(e.target.value);
+                  if (validationErrors.leadInvestigator) {
+                    setValidationErrors((prev) => ({ ...prev, leadInvestigator: '' }));
+                  }
+                }}
+                className="w-full bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-blue-500 font-sans"
+              />
+              {validationErrors.leadInvestigator && (
+                <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">{validationErrors.leadInvestigator}</p>
+              )}
             </div>
           </div>
 
@@ -498,17 +478,17 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-navy-800 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-300 font-mono text-xs font-bold rounded-lg transition-colors focus:ring-2 focus:ring-slate-400 focus:outline-hidden"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-navy-800 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-300 font-mono text-xs font-bold rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-mono text-xs font-bold rounded-lg flex items-center gap-2 transition-all shadow-md focus:ring-2 focus:ring-blue-400 focus:outline-hidden"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-mono text-xs font-bold rounded-lg flex items-center gap-2 transition-all shadow-md"
             >
               <FolderPlus className={`w-4 h-4 ${submitting ? 'animate-spin' : ''}`} />
-              {submitting ? 'Anchoring Case...' : 'Initialize Case Passport'}
+              {submitting ? 'Anchoring Incident...' : 'Create Case Passport'}
             </button>
           </div>
         </form>

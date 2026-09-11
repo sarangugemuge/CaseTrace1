@@ -9,6 +9,7 @@ import { riskEngine } from '../../services/riskEngine';
 import { apiClient } from '../../lib/apiClient';
 import { GlobalSearchResponse } from '../../types/search';
 import { ThemeToggle } from './ThemeToggle';
+import { getRoleLabel } from '../../lib/roles';
 import {
   Shield,
   UserCheck,
@@ -415,7 +416,7 @@ export const Navbar: React.FC = () => {
           >
             <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span className="text-slate-500 dark:text-slate-400">CLEARANCE:</span>
-            <span className="text-emerald-700 dark:text-emerald-400 font-bold uppercase">{currentUser.role}</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-bold uppercase">{getRoleLabel(currentUser.role)}</span>
             <span className="text-[10px] text-slate-400 border-l border-slate-200 dark:border-navy-800 pl-1.5 hidden xl:inline">Role-governed access</span>
           </div>
 
@@ -516,13 +517,10 @@ export const Navbar: React.FC = () => {
                 {currentUser.avatar}
               </div>
               <div className="hidden sm:block text-xs">
-                <div className="font-bold text-slate-900 dark:text-slate-200 flex items-center gap-1.5">
-                  <span>{currentUser.name}</span>
-                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded">
-                    DEMO ROLE
-                  </span>
+                <div className="font-bold text-slate-900 dark:text-slate-200">
+                  {currentUser.name}
                 </div>
-                <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{currentUser.role}</div>
+                <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{getRoleLabel(currentUser.role)}</div>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
             </button>
@@ -535,24 +533,24 @@ export const Navbar: React.FC = () => {
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded">
                       <Shield className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                      DEMO MODE • PERSONA SIMULATION
+                      DEMO MODE • QUICK PERSONA SWITCHING
                     </span>
                     <span className="text-[10px] font-mono text-slate-400">SIH 2026</span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                    Simulates persona credentials for evaluation. Backend authorization remains authoritative via FastAPI server-side RBAC.
+                    Quickly evaluate access control and features across authorized institutional roles.
                   </p>
                 </div>
 
-                {/* Current Demo Role Permission Summary */}
+                {/* Current Role Permission Summary */}
                 {ROLE_PERMISSIONS[currentUser.role] && (
                   <div className="p-3 bg-slate-50 dark:bg-navy-950/70 border-b border-slate-200 dark:border-navy-800 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="text-[11px] font-mono font-bold text-slate-800 dark:text-slate-200">
-                        Current Demo Role: <span className="text-blue-600 dark:text-blue-400">{currentUser.role}</span>
+                        Active Role: <span className="text-blue-600 dark:text-blue-400">{getRoleLabel(currentUser.role)}</span>
                       </div>
                       <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                        ACTIVE
+                        AUTHENTICATED
                       </span>
                     </div>
 
@@ -586,7 +584,7 @@ export const Navbar: React.FC = () => {
 
                 {/* Persona Switcher List */}
                 <div className="px-3 pt-2 pb-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Select Persona (7 System Roles)
+                  Switch Persona (7 System Roles)
                 </div>
                 <div className="max-h-56 overflow-y-auto px-1 py-1">
                   {MOCK_USERS.map((user) => (
@@ -607,7 +605,7 @@ export const Navbar: React.FC = () => {
                             <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 inline" />
                           )}
                         </div>
-                        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{user.role} • {user.department}</div>
+                        <div className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-semibold">{getRoleLabel(user.role)} • <span className="text-slate-500 dark:text-slate-400 font-normal">{user.department}</span></div>
                       </div>
                     </button>
                   ))}

@@ -62,7 +62,7 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
       sensitivity: 'FORENSIC',
       uploader: 'Dr. Alex Mercer (Forensic Officer)',
       timestamp: '2026-03-01T16:45:00Z',
-      status: 'VERIFIED ON CHAIN',
+      status: 'INTEGRITY VERIFIED',
     },
     {
       id: 'ART-002',
@@ -72,7 +72,7 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
       sensitivity: 'CONFIDENTIAL',
       uploader: 'Insp. Sarah Jenkins (Investigating Officer)',
       timestamp: '2026-02-10T14:30:00Z',
-      status: 'VERIFIED ON CHAIN',
+      status: 'INTEGRITY VERIFIED',
     },
     {
       id: 'ART-003',
@@ -82,7 +82,7 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
       sensitivity: 'TOP_SECRET',
       uploader: 'Dr. Alex Mercer (Forensic Officer)',
       timestamp: '2026-03-02T11:20:00Z',
-      status: 'VERIFIED ON CHAIN',
+      status: 'INTEGRITY VERIFIED',
     },
   ];
 
@@ -98,7 +98,7 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
       sensitivity: d.sensitivity,
       uploader: d.uploadedBy,
       timestamp: d.uploadedAt,
-      status: d.integrityStatus === 'VERIFIED' ? 'VERIFIED ON CHAIN' : d.integrityStatus,
+      status: d.integrityStatus === 'VERIFIED' ? 'INTEGRITY VERIFIED' : d.integrityStatus,
     }));
 
   // Combine uploaded evidence with seeded artifacts, avoiding duplicate IDs

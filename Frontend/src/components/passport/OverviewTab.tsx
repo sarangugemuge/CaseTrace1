@@ -29,7 +29,7 @@ export const OverviewTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) 
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-subtle transition-colors">
           <div className="text-xs font-mono text-slate-500 dark:text-slate-400 uppercase flex items-center justify-between">
-            <span>BLOCKCHAIN ANCHOR</span>
+            <span>INTEGRITY ANCHOR</span>
             <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           </div>
           <div className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 mt-2 truncate">{caseData.blockchainAnchorId}</div>

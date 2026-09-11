@@ -1,5 +1,5 @@
+import os
 import logging
-import io
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -12,6 +12,12 @@ class StorageService:
         self.bucket = settings.STORAGE_BUCKET
         self.endpoint = settings.STORAGE_ENDPOINT
         self.client = None
+        self.fallback_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "storage_data",
+            self.bucket
+        )
+        os.makedirs(self.fallback_dir, exist_ok=True)
         self._init_client()
 
     def _init_client(self):
@@ -23,87 +29,148 @@ class StorageService:
                 aws_secret_access_key=settings.STORAGE_SECRET_KEY,
                 region_name=settings.STORAGE_REGION,
                 use_ssl=settings.STORAGE_SECURE,
-                config=Config(signature_version='s3v4', connect_timeout=1, read_timeout=1, retries={'max_attempts': 1})
+                config=Config(
+                    signature_version='s3v4',
+                    connect_timeout=1,
+                    read_timeout=1,
+                    retries={'max_attempts': 1}
+                )
             )
         except Exception as err:
-            logger.error(f"Failed to initialize S3 storage client: {err}")
+            logger.warning(f"S3 client initialization notice: {err}")
             self.client = None
 
+    def _get_fallback_filepath(self, storage_key: str) -> str:
+        # Prevent unsafe path traversal
+        clean_key = storage_key.lstrip("/\\").replace("\\", "/")
+        target_path = os.path.abspath(os.path.join(self.fallback_dir, clean_key))
+        if not target_path.startswith(os.path.abspath(self.fallback_dir)):
+            raise ValueError("Unsafe storage key path traversal detected.")
+        return target_path
+
     def upload_object(self, storage_key: str, content: bytes, mime_type: str = "application/octet-stream") -> bool:
-        if not self.client:
-            raise RuntimeError("MinIO object storage is currently offline or unreachable.")
+        # 1. Try MinIO S3 object storage first
+        if self.client:
+            try:
+                self.client.put_object(
+                    Bucket=self.bucket,
+                    Key=storage_key,
+                    Body=content,
+                    ContentType=mime_type
+                )
+                logger.info(f"Stored object to MinIO S3: {storage_key}")
+                return True
+            except Exception as e:
+                logger.warning(f"MinIO S3 unavailable ({e}). Storing to designated local fallback.")
+
+        # 2. Designated local fallback storage for dev resilience
         try:
-            self.client.put_object(
-                Bucket=self.bucket,
-                Key=storage_key,
-                Body=content,
-                ContentType=mime_type
-            )
+            filepath = self._get_fallback_filepath(storage_key)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            with open(filepath, "wb") as f:
+                f.write(content)
+            logger.info(f"Stored object to local fallback storage: {filepath}")
             return True
-        except Exception as e:
-            logger.warning(f"S3 upload error for key {storage_key}: {e}")
-            raise RuntimeError(f"Storage upload failure: {e}")
+        except Exception as fs_err:
+            logger.error(f"Local fallback storage write failure for {storage_key}: {fs_err}")
+            raise RuntimeError(f"Storage upload failure: {fs_err}")
 
     def download_object(self, storage_key: str) -> bytes:
-        if not self.client:
-            raise RuntimeError("MinIO object storage is currently offline or unreachable.")
+        # 1. Try MinIO S3 object storage
+        if self.client:
+            try:
+                response = self.client.get_object(Bucket=self.bucket, Key=storage_key)
+                return response['Body'].read()
+            except Exception as e:
+                logger.warning(f"MinIO S3 download attempt for {storage_key}: {e}")
+
+        # 2. Try local fallback storage
         try:
-            response = self.client.get_object(Bucket=self.bucket, Key=storage_key)
-            return response['Body'].read()
-        except Exception as e:
-            logger.warning(f"S3 download error for key {storage_key}: {e}")
-            raise RuntimeError(f"Storage download failure: {e}")
+            filepath = self._get_fallback_filepath(storage_key)
+            if os.path.exists(filepath):
+                with open(filepath, "rb") as f:
+                    return f.read()
+        except Exception as fs_err:
+            logger.warning(f"Fallback storage read error for {storage_key}: {fs_err}")
+
+        raise RuntimeError(f"Storage object '{storage_key}' not found in MinIO or local fallback storage.")
 
     def delete_object(self, storage_key: str) -> bool:
-        if not self.client:
-            return False
+        deleted = False
+        if self.client:
+            try:
+                self.client.delete_object(Bucket=self.bucket, Key=storage_key)
+                deleted = True
+            except Exception as e:
+                logger.warning(f"S3 delete error: {e}")
+
         try:
-            self.client.delete_object(Bucket=self.bucket, Key=storage_key)
-            return True
-        except Exception as e:
-            logger.warning(f"S3 delete error for key {storage_key}: {e}")
-            return False
+            filepath = self._get_fallback_filepath(storage_key)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                deleted = True
+        except Exception as fs_err:
+            logger.warning(f"Fallback delete error: {fs_err}")
+
+        return deleted
 
     def object_exists(self, storage_key: str) -> bool:
-        if not self.client:
-            return False
+        if self.client:
+            try:
+                self.client.head_object(Bucket=self.bucket, Key=storage_key)
+                return True
+            except Exception:
+                pass
+
         try:
-            self.client.head_object(Bucket=self.bucket, Key=storage_key)
-            return True
+            filepath = self._get_fallback_filepath(storage_key)
+            return os.path.exists(filepath)
         except Exception:
             return False
 
     def generate_presigned_url(self, storage_key: str, expires_in: int = 300) -> str:
-        if not self.client:
-            raise RuntimeError("MinIO object storage is currently offline or unreachable.")
-        try:
-            return self.client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket, 'Key': storage_key},
-                ExpiresIn=expires_in
-            )
-        except Exception as e:
-            logger.error(f"Presigned URL generation error: {e}")
-            raise RuntimeError(f"Presigned URL generation failed: {e}")
+        if self.client:
+            try:
+                return self.client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': self.bucket, 'Key': storage_key},
+                    ExpiresIn=expires_in
+                )
+            except Exception:
+                pass
+        return f"/api/documents/preview-fallback/{storage_key}"
 
     def verify_storage_connection(self) -> dict:
-        if not self.client:
-            return {"status": "error", "error": "S3 client initialization failed."}
-        try:
-            # Check bucket existence or list buckets
-            self.client.head_bucket(Bucket=self.bucket)
-            return {"status": "connected", "bucket": self.bucket, "endpoint": self.endpoint}
-        except ClientError as err:
-            code = err.response['Error']['Code']
-            if code == '404':
-                # Attempt to auto-create bucket if missing in dev
-                try:
-                    self.client.create_bucket(Bucket=self.bucket)
-                    return {"status": "connected", "bucket": self.bucket, "notice": "Bucket auto-created"}
-                except Exception as c_err:
-                    return {"status": "error", "bucket": self.bucket, "error": f"Bucket missing: {c_err}"}
-            return {"status": "error", "bucket": self.bucket, "error": err.response['Error']['Message']}
-        except Exception as ex:
-            return {"status": "error", "endpoint": self.endpoint, "error": str(ex)}
+        if self.client:
+            try:
+                self.client.head_bucket(Bucket=self.bucket)
+                return {
+                    "status": "connected",
+                    "provider": "MINIO_S3",
+                    "bucket": self.bucket,
+                    "endpoint": self.endpoint
+                }
+            except ClientError as err:
+                code = err.response.get('Error', {}).get('Code')
+                if code == '404':
+                    try:
+                        self.client.create_bucket(Bucket=self.bucket)
+                        return {
+                            "status": "connected",
+                            "provider": "MINIO_S3",
+                            "bucket": self.bucket,
+                            "notice": "Bucket auto-created"
+                        }
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        return {
+            "status": "active_fallback",
+            "provider": "LOCAL_FALLBACK",
+            "fallback_dir": self.fallback_dir,
+            "bucket": self.bucket
+        }
 
 storage_service = StorageService()

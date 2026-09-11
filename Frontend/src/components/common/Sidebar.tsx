@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { Tooltip } from './Tooltip';
+import { getRoleLabel } from '../../lib/roles';
 import {
   LayoutDashboard,
   FolderLock,
@@ -81,7 +82,7 @@ export const Sidebar: React.FC = () => {
       name: 'Admin & System Config',
       href: '/dashboard/admin',
       icon: Settings,
-      roles: ['Admin', 'Senior Officer'],
+      roles: ['Admin'],
     },
   ];
 
@@ -113,7 +114,7 @@ export const Sidebar: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-              <span className="text-xs font-bold text-slate-900 dark:text-white tracking-wide font-mono uppercase truncate">{currentUser.role}</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white tracking-wide font-mono uppercase truncate">{getRoleLabel(currentUser.role)}</span>
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">{currentUser.department}</div>
           </div>

@@ -6,6 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { apiClient } from '../../../lib/apiClient';
 import { caseService } from '../../../services/caseService';
 import { accessControlEngine } from '../../../services/accessControlEngine';
+import { getRoleLabel } from '../../../lib/roles';
 import { CasePassport } from '../../../types/case';
 import { SensitivityBadge } from '../../../components/common/Badge';
 import { CreateCaseModal } from '../../../components/passport/CreateCaseModal';
@@ -92,7 +93,7 @@ export default function CasesPage() {
           <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
             <span>ROLE CLEARANCE:</span>
             <span className="text-emerald-700 dark:text-emerald-400 uppercase font-bold">
-              {currentUser.role}
+              {getRoleLabel(currentUser.role)}
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -136,28 +137,23 @@ export default function CasesPage() {
           {canCreate ? (
             <button
               onClick={() => setCreateModalOpen(true)}
-              aria-label="Create New Digital Case Passport"
+              aria-label="Add New Incident"
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold rounded-lg flex items-center gap-2 transition-all shadow-md shrink-0"
             >
               <Plus className="w-4 h-4" />
-              New Case Passport
+              <span>+ Add New Incident</span>
             </button>
           ) : (
             <div
-              title="Senior Officer or Admin clearance required to initialize new case passports"
+              title="Authorization required to create new incident reports"
               className="px-3 py-1.5 bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-400 rounded-lg flex items-center gap-1.5 text-[11px] font-mono cursor-not-allowed border border-slate-200 dark:border-navy-700"
             >
               <Lock className="w-3.5 h-3.5" />
-              Creation: Senior Officer Only
+              <span>Creation: Restricted</span>
             </div>
           )}
         </div>
       </div>
-
-      {/* Backend Availability Banner when operating in fallback mode */}
-      {!isLive && (
-        <BackendUnavailableBanner onRetry={loadCases} isRetrying={loading} />
-      )}
 
       {/* Success Notification Banner */}
       {justCreatedMessage && (

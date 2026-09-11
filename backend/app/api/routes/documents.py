@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from backend.app.db.database import get_db
 from backend.app.db.models.user import UserModel
-from backend.app.schemas.document import DocumentResponse, DocumentVerificationResult
+from backend.app.schemas.document import DocumentResponse, DocumentVerificationResult, DocumentMetadataUpdate
 from backend.app.dependencies.auth import get_current_user
 from backend.app.services.document_service import DocumentService
 
@@ -46,6 +46,8 @@ async def upload_case_document(
     sensitivity: str = Form("CONFIDENTIAL"),
     purpose: str = Form("INVESTIGATION"),
     evidence_id: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
@@ -71,7 +73,9 @@ async def upload_case_document(
         sensitivity=sensitivity,
         user=current_user,
         purpose=purpose,
-        evidence_id=evidence_id
+        evidence_id=evidence_id,
+        description=description,
+        notes=notes
     )
 
     if not decision["allowed"]:
@@ -81,6 +85,102 @@ async def upload_case_document(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Document upload processing failed.")
 
     return DocumentResponse.model_validate(doc)
+
+@router.post("/documents/{document_id}/versions", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+async def add_document_version(
+    document_id: str,
+    file: UploadFile = File(...),
+    change_reason: str = Form(...),
+    purpose: Optional[str] = Form("INVESTIGATION"),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot upload an empty file version (0 bytes)."
+        )
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File size exceeds maximum allowed limit of 50MB."
+        )
+
+    service = DocumentService(db)
+    doc, decision = service.add_document_version(
+        document_id=document_id,
+        content=content,
+        filename=file.filename or "updated_evidence.dat",
+        mime_type=file.content_type or "application/octet-stream",
+        user=current_user,
+        change_reason=change_reason,
+        purpose=purpose
+    )
+
+    if not doc:
+        if not decision["allowed"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=decision["reason"])
+
+    if not decision["allowed"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
+
+    return DocumentResponse.model_validate(doc)
+
+@router.put("/documents/{document_id}/metadata", response_model=DocumentResponse)
+def update_document_metadata(
+    document_id: str,
+    updates: DocumentMetadataUpdate,
+    purpose: Optional[str] = Query("INVESTIGATION"),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    service = DocumentService(db)
+    doc, decision = service.update_document_metadata(
+        document_id=document_id,
+        updates=updates.model_dump(exclude_unset=True),
+        user=current_user,
+        purpose=purpose
+    )
+
+    if not doc:
+        if not decision["allowed"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=decision["reason"])
+
+    if not decision["allowed"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
+
+    return DocumentResponse.model_validate(doc)
+
+@router.get("/documents/{document_id}/view")
+def view_case_document(
+    document_id: str,
+    purpose: Optional[str] = Query("VIEW"),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    service = DocumentService(db)
+    content, doc, decision = service.get_document_for_view(document_id, current_user, purpose=purpose)
+
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document {document_id} not found.")
+
+    if not decision["allowed"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
+
+    if content is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Document content unavailable.")
+
+    return Response(
+        content=content,
+        media_type=doc.mime_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f'inline; filename="{doc.name}"',
+            "X-SHA256-Hash": doc.sha256_hash
+        }
+    )
 
 @router.get("/documents/{document_id}/download")
 def download_case_document(

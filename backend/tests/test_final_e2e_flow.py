@@ -160,7 +160,7 @@ def test_complete_15_step_e2e_scenario(client):
         "lead_investigator": "Judge Miller"
     }, headers=court_user_headers)
     assert unauth_case_res.status_code == 403
-    assert "Only Senior Officers and Admins" in unauth_case_res.json()["detail"]
+    assert "authorized" in unauth_case_res.json()["detail"].lower()
 
     # Court User cannot verify confidential evidence (HTTP 403)
     unauth_verify_res = client.post(

@@ -23,18 +23,18 @@ export const BlockchainBadge: React.FC<BlockchainBadgeProps> = ({
         <div>
           <div className="text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
             <Database className="w-3.5 h-3.5" />
-            SIMULATED BLOCKCHAIN IMMUTABLE ANCHOR
+            CRYPTOGRAPHIC INTEGRITY ANCHOR LEDGER
           </div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400">Block #{blockNumber} • Merkle Root: {merkleRoot.slice(0, 18)}...</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400">Anchor #{blockNumber} • Root Hash: {merkleRoot.slice(0, 18)}...</div>
         </div>
       </div>
 
       <div className="text-right text-[10px]">
         <div className="text-slate-500 dark:text-slate-400 flex items-center gap-1 justify-end">
           <LinkIcon className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-          TX: <span className="text-blue-600 dark:text-blue-400 truncate max-w-[140px] font-bold">{transactionId}</span>
+          ANCHOR ID: <span className="text-blue-600 dark:text-blue-400 truncate max-w-[140px] font-bold">{transactionId}</span>
         </div>
-        <div className="text-emerald-700 dark:text-emerald-500 font-semibold">STATUS: CONFIRMED ON LEDGER</div>
+        <div className="text-emerald-700 dark:text-emerald-500 font-semibold">STATUS: SHA-256 ANCHOR ACTIVE</div>
       </div>
     </div>
   );
