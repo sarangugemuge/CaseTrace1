@@ -19,8 +19,10 @@ import {
 export const Sidebar: React.FC = () => {
   const pathname = usePathname() || '/dashboard';
   const { currentUser } = useAuth();
-  const role = currentUser.role;
   const [collapsed, setCollapsed] = useState(false);
+
+  if (!currentUser) return null;
+  const role = currentUser.role;
 
   const navItems = [
     {

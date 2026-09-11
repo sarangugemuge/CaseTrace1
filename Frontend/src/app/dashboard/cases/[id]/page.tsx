@@ -75,6 +75,8 @@ export default function CasePassportDetailPage() {
     loadDocuments();
   }, [loadDocuments]);
 
+  if (!currentUser) return null;
+
   if (!caseData) {
     return (
       <div className="space-y-4">

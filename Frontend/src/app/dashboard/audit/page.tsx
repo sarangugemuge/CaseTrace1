@@ -8,6 +8,7 @@ import { ShieldAlert, Activity } from 'lucide-react';
 
 export default function AuditPage() {
   const { currentUser } = useAuth();
+  if (!currentUser) return null;
 
   return (
     <div className="space-y-6">

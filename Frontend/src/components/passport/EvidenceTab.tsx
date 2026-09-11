@@ -42,9 +42,9 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [verifiedArtifactId, setVerifiedArtifactId] = useState<string | null>(null);
 
-  const canRegister = ['Senior Officer', 'Investigating Officer', 'Forensic Officer', 'Admin'].includes(
-    currentUser.role
-  );
+  const canRegister = currentUser
+    ? ['Senior Officer', 'Investigating Officer', 'Forensic Officer', 'Admin'].includes(currentUser.role)
+    : false;
 
   const handleCopyHash = (hash: string) => {
     navigator.clipboard.writeText(hash);

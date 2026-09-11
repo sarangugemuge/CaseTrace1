@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const [isLive, setIsLive] = useState<boolean>(true);
 
   const loadData = useCallback(async () => {
+    if (!currentUser) return;
     setLoading(true);
     setError(null);
     try {
@@ -67,6 +68,8 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  if (!currentUser) return null;
 
   // Fallback calculations if stats not yet loaded
   const displayCasesCount = stats?.totalAuthorizedCases ?? cases.length;

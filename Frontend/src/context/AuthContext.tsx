@@ -5,11 +5,13 @@ import { createContext, useContext, useState, useEffect } from "react";
 import type { User, Role } from "../types/auth";
 import { authService } from "../services/authService";
 import { auditService } from "../services/auditService";
+import { apiClient } from "../lib/apiClient";
 
 interface AuthContextType {
-  currentUser: User;
+  currentUser: User | null;
   isAuthenticated: boolean;
-  login: (userId: string) => void;
+  isLoading: boolean;
+  login: (identifier: string, role?: Role, password?: string) => Promise<User>;
   logout: () => void;
   switchRole: (role: Role) => void;
 }
@@ -19,35 +21,62 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({
   children,
 }: React.PropsWithChildren): React.ReactElement => {
-  const [currentUser, setCurrentUser] = useState<User>(
-    authService.getCurrentUser(),
-  );
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    // Only check localStorage on client mount to prevent SSR hydration mismatch
     const user = authService.getCurrentUser();
-    setCurrentUser(user);
-    setIsAuthenticated(authService.isAuthenticated());
+    const authenticated = authService.isAuthenticated();
+    if (user && authenticated) {
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+    } else {
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+    }
+    setIsLoading(false);
   }, []);
 
-  const handleLogin = (userId: string) => {
-    const user = authService.login(userId);
-    setCurrentUser(user);
-    setIsAuthenticated(true);
-    auditService.logEvent(user, "LOGIN", {
-      result: "SUCCESS",
-      riskLevel: "LOW",
-      description: `User ${user.name} logged into CASETRACE with role ${user.role}.`,
-    });
+  const handleLogin = async (
+    identifier: string,
+    role?: Role,
+    password: string = "password123"
+  ): Promise<User> => {
+    try {
+      const user = await apiClient.login(identifier, role, password);
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      auditService.logEvent(user, "LOGIN", {
+        result: "SUCCESS",
+        riskLevel: "LOW",
+        description: `User ${user.name} logged into CASETRACE with role ${user.role}.`,
+      });
+      return user;
+    } catch {
+      const user = authService.login(identifier, role);
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      auditService.logEvent(user, "LOGIN", {
+        result: "SUCCESS",
+        riskLevel: "LOW",
+        description: `User ${user.name} logged into CASETRACE with role ${user.role}.`,
+      });
+      return user;
+    }
   };
 
   const handleLogout = () => {
-    auditService.logEvent(currentUser, "LOGOUT", {
-      result: "SUCCESS",
-      riskLevel: "LOW",
-      description: `User ${currentUser.name} logged out.`,
-    });
+    if (currentUser) {
+      auditService.logEvent(currentUser, "LOGOUT", {
+        result: "SUCCESS",
+        riskLevel: "LOW",
+        description: `User ${currentUser.name} logged out.`,
+      });
+    }
     authService.logout();
+    setCurrentUser(null);
     setIsAuthenticated(false);
   };
 
@@ -67,6 +96,7 @@ export const AuthProvider = ({
       value={{
         currentUser,
         isAuthenticated,
+        isLoading,
         login: handleLogin,
         logout: handleLogout,
         switchRole: handleSwitchRole,

@@ -9,6 +9,7 @@ import { PermissionDeniedState } from '../../../components/common/UXStates';
 
 export default function AdminPage() {
   const { currentUser } = useAuth();
+  if (!currentUser) return null;
   const isAuthorized = currentUser.role === 'Admin' || currentUser.role === 'Senior Officer';
 
   if (!isAuthorized) {

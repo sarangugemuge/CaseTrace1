@@ -2,13 +2,11 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
-import { Navbar } from '../components/common/Navbar';
-import { Sidebar } from '../components/common/Sidebar';
-import { SecurityBanner } from '../components/common/SecurityBanner';
+import { AppShell } from '../components/common/AppShell';
 
 export const metadata: Metadata = {
-  title: 'CASETRACE | Secure Digital Case Passport',
-  description: 'Multi-Role Secure View & Blockchain-Anchored Evidence Infrastructure',
+  title: 'CASETRACE | Secure Digital Case Passport & Evidence Integrity Platform',
+  description: 'Centralized Digital Case Passport, SHA-256 Evidence Integrity Verification, and Multi-Role Secure Governance Infrastructure',
 };
 
 export default function RootLayout({
@@ -42,14 +40,9 @@ export default function RootLayout({
       <body className="bg-background text-text-primary min-h-screen flex flex-col antialiased selection:bg-blue-600 selection:text-white transition-colors duration-200">
         <ThemeProvider>
           <AuthProvider>
-            <SecurityBanner />
-            <Navbar />
-            <div className="flex flex-1">
-              <Sidebar />
-              <main className="flex-1 p-6 lg:p-8 overflow-y-auto max-w-[1600px] mx-auto w-full">
-                {children}
-              </main>
-            </div>
+            <AppShell>
+              {children}
+            </AppShell>
           </AuthProvider>
         </ThemeProvider>
       </body>

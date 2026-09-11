@@ -134,6 +134,8 @@ export const Navbar: React.FC = () => {
     router.push(url);
   };
 
+  if (!currentUser) return null;
+
   return (
     <header className="bg-white dark:bg-navy-900 border-b border-slate-200 dark:border-navy-800 text-slate-900 dark:text-white sticky top-0 z-40 shadow-xs transition-colors">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
@@ -615,11 +617,12 @@ export const Navbar: React.FC = () => {
                     onClick={() => {
                       logout();
                       setDropdownOpen(false);
+                      router.push('/login');
                     }}
                     className="w-full text-left px-3 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded flex items-center gap-2 font-mono"
                   >
                     <LogOut className="w-3.5 h-3.5" />
-                    Reset Session
+                    Sign Out / Reset Session
                   </button>
                 </div>
               </div>

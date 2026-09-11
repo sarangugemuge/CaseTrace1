@@ -46,6 +46,9 @@ export const caseService = {
 
   createCase(caseData: Partial<CasePassport>): CasePassport {
     const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Authentication required to create cases.');
+    }
     if (currentUser.role !== 'Senior Officer' && currentUser.role !== 'Admin') {
       throw new Error('Only Senior Officers and Admins are authorized to create new cases.');
     }

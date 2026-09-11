@@ -68,7 +68,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
       setIncidentDate(todayStr);
       setPriority('HIGH');
       setClassification('CONFIDENTIAL');
-      setLeadInvestigator(currentUser.name || 'Cmdr. Robert Vance');
+      setLeadInvestigator(currentUser?.name || 'Cmdr. Robert Vance');
       setValidationErrors({});
       setServerError(null);
       setCreatedCase(null);

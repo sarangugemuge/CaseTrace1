@@ -106,9 +106,11 @@ async function fetchWithFallback<T>(
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const currentUser = authService.getCurrentUser();
+    const token = authService.getToken();
     const headers: Record<string, string> = {
-      'X-User-Role': currentUser.role,
-      'X-User-Id': currentUser.id,
+      'X-User-Role': currentUser?.role || '',
+      'X-User-Id': currentUser?.id || '',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...(options.headers as Record<string, string>),
     };
 
@@ -164,15 +166,29 @@ export const apiClient = {
     }
   },
 
-  async login(email: string, role?: Role): Promise<User> {
-    return fetchWithFallback(
-      '/api/auth/login',
-      {
+  async login(email: string, role?: Role, password: string = 'password123'): Promise<User> {
+    if (API_MODE === 'mock') {
+      return authService.login(email, role);
+    }
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
-        body: JSON.stringify({ email, password: 'password123' }),
-      },
-      () => authService.switchDemoRole(role || 'Senior Officer')
-    );
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        const user = authService.login(data.user?.email || email, data.user?.role || role, data.access_token);
+        return user;
+      }
+      return authService.login(email, role);
+    } catch {
+      return authService.login(email, role);
+    }
   },
 
   async getCases(user: User): Promise<CasePassport[]> {
@@ -207,7 +223,7 @@ export const apiClient = {
       incident_date: caseData.incidentDate,
       priority: caseData.priority || 'HIGH',
       classification: caseData.classification || 'CONFIDENTIAL',
-      lead_investigator: caseData.leadInvestigator || currentUser.name,
+      lead_investigator: caseData.leadInvestigator || currentUser?.name || 'Authorized Officer',
       status: caseData.status || 'ACTIVE',
       case_stage: caseData.caseStage || 'FIR_LODGED',
       victims: caseData.victims || [],
@@ -222,8 +238,8 @@ export const apiClient = {
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'X-User-Role': currentUser.role,
-        'X-User-Id': currentUser.id,
+        'X-User-Role': currentUser?.role || '',
+        'X-User-Id': currentUser?.id || '',
       };
 
       const res = await fetch(`${API_BASE_URL}/api/cases`, {
@@ -317,7 +333,7 @@ export const apiClient = {
           sensitivity: sensitivity as any,
           version: 1,
           versionHistory: [],
-          uploadedBy: currentUser.name,
+          uploadedBy: currentUser?.name || 'Authorized Officer',
           uploadedAt: new Date().toISOString(),
           sha256Hash: verificationService.generateHash(`${file.name}-${Date.now()}`),
           blockchainRecordId: `blk-mock-${Date.now()}`,
@@ -340,8 +356,8 @@ export const apiClient = {
       const currentUser = authService.getCurrentUser();
       const res = await fetch(`${API_BASE_URL}/api/documents/${documentId}/download?purpose=${encodeURIComponent(purpose)}`, {
         headers: {
-          'X-User-Role': currentUser.role,
-          'X-User-Id': currentUser.id,
+          'X-User-Role': currentUser?.role || '',
+          'X-User-Id': currentUser?.id || '',
         },
       });
 
@@ -504,7 +520,7 @@ export const apiClient = {
       {},
       () => {
         const currentUser = authService.getCurrentUser();
-        const userCases = caseService.getCasesForUser(currentUser);
+        const userCases = currentUser ? caseService.getCasesForUser(currentUser) : [];
         const lower = clean.toLowerCase();
 
         // 1. Cases
@@ -677,8 +693,8 @@ export const apiClient = {
       {},
       () => {
         const currentUser = authService.getCurrentUser();
-        const isGlobal = currentUser.role === 'Senior Officer' || currentUser.role === 'Auditor / Security' || currentUser.role === 'Admin';
-        const userCases = caseService.getCasesForUser(currentUser);
+        const isGlobal = currentUser?.role === 'Senior Officer' || currentUser?.role === 'Auditor / Security' || currentUser?.role === 'Admin';
+        const userCases = currentUser ? caseService.getCasesForUser(currentUser) : [];
         const authorizedCaseIds = userCases.map((c) => c.caseId);
         const alerts = riskEngine.getMockAlerts();
 
@@ -702,7 +718,7 @@ export const apiClient = {
 
         // Alerts
         alerts.forEach((alt) => {
-          if (currentUser.role === 'Court User') return;
+          if (currentUser?.role === 'Court User') return;
           if (!isGlobal && (!alt.caseId || !authorizedCaseIds.includes(alt.caseId))) return;
           notifs.push({
             id: `notif-alert-${alt.alertId}`,

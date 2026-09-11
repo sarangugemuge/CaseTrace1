@@ -34,9 +34,8 @@ export default function CasesPage() {
   const [justCreatedMessage, setJustCreatedMessage] = useState<string | null>(null);
   const [isLive, setIsLive] = useState<boolean>(true);
 
-  const canCreate = accessControlEngine.canCreateCase(currentUser);
-
   const loadCases = useCallback(async () => {
+    if (!currentUser) return;
     setLoading(true);
     try {
       const conn = await apiClient.checkBackendConnection();
@@ -55,6 +54,10 @@ export default function CasesPage() {
   useEffect(() => {
     loadCases();
   }, [loadCases]);
+
+  if (!currentUser) return null;
+
+  const canCreate = accessControlEngine.canCreateCase(currentUser);
 
   const handleCaseCreated = (newCase: CasePassport) => {
     setCases((prev) => [newCase, ...prev.filter((c) => c.caseId !== newCase.caseId)]);

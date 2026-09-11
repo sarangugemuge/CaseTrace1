@@ -119,6 +119,7 @@ export const RegisterEvidenceModal: React.FC<RegisterEvidenceModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) return;
     setServerError(null);
 
     if (!validate()) return;
@@ -162,6 +163,8 @@ Custody Notes: ${custodyNotes || 'Initial evidence seizure and registration'}
       setSubmitting(false);
     }
   };
+
+  if (!isOpen || !currentUser) return null;
 
   return (
     <Modal
