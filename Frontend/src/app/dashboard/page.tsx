@@ -8,7 +8,7 @@ import { caseService } from '../../services/caseService';
 import { auditService } from '../../services/auditService';
 import { riskEngine } from '../../services/riskEngine';
 import { accessControlEngine } from '../../services/accessControlEngine';
-import { getRoleLabel } from '../../lib/roles';
+import { getRoleLabel, getRoleHindiLabel } from '../../lib/roles';
 import { CasePassport } from '../../types/case';
 import { DashboardStats } from '../../types/security';
 import { SensitivityBadge } from '../../components/common/Badge';
@@ -102,13 +102,15 @@ export default function DashboardPage() {
       {/* Dashboard Command Header */}
       <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-800 rounded-xl p-6 shadow-sm flex flex-wrap items-center justify-between gap-4 transition-colors">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
             <span className="font-semibold text-slate-800 dark:text-slate-200">{currentUser.name}</span>
             <span>•</span>
             <span className="text-blue-600 dark:text-blue-400 font-bold uppercase">{displayRole}</span>
+            <span className="text-slate-500 dark:text-slate-400 font-sans">({getRoleHindiLabel(currentUser.role)})</span>
             <span>•</span>
             <span>{currentUser.department}</span>
           </div>
+
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             CaseTrace Command Dashboard
           </h1>
@@ -220,8 +222,9 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-xs font-bold text-purple-700 dark:text-purple-300 mt-2 truncate uppercase">{displayRole}</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-sans">Role-governed clearance tier</div>
+            <div className="text-[11px] text-blue-600 dark:text-blue-400 font-sans mt-0.5 truncate font-medium">{getRoleHindiLabel(currentUser.role)}</div>
           </div>
+
         </div>
       )}
 

@@ -58,10 +58,10 @@ export const accessControlEngine = {
     const role = user.role;
     const sensitivity = document.sensitivity;
 
-    // Role sensitivity authorization map
     const allowedSensitivities: Record<Role, SensitivityLevel[]> = {
       'Senior Officer': ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'TOP_SECRET', 'FORENSIC'],
       'Investigating Officer': ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL'],
+      'Cyber Crime Investigating Officer': ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL'],
       'Forensic Officer': ['PUBLIC', 'INTERNAL', 'FORENSIC'],
       'Prosecutor': ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL'],
       'Court User': ['PUBLIC'], // Public / Redacted Court Filings
@@ -116,7 +116,11 @@ export const accessControlEngine = {
     if (role === 'Forensic Officer') return true; // Purpose mandatory
     if (role === 'Auditor / Security') return true;
     if (role === 'Prosecutor') return true;
-    if (role === 'Investigating Officer' && sensitivity === 'CONFIDENTIAL') return true;
+    if (
+      (role === 'Investigating Officer' || role === 'Cyber Crime Investigating Officer') &&
+      sensitivity === 'CONFIDENTIAL'
+    )
+      return true;
     if (action === 'DOWNLOAD' || action === 'SHARE') return true;
     return false;
   },
@@ -125,6 +129,7 @@ export const accessControlEngine = {
     return (
       user.role === 'Senior Officer' ||
       user.role === 'Investigating Officer' ||
+      user.role === 'Cyber Crime Investigating Officer' ||
       user.role === 'Admin'
     );
   },

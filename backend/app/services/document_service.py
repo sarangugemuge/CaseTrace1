@@ -23,6 +23,34 @@ class DocumentService:
         self.case_repo = CaseRepository(db)
         self.audit_svc = AuditService(db)
 
+    def _append_custody_entry(
+        self,
+        doc: DocumentModel,
+        event: str,
+        actor: str,
+        actor_role: str,
+        actor_id: Optional[str] = None,
+        version: Optional[int] = None,
+        sha256: Optional[str] = None,
+        justification: Optional[str] = None,
+        details: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        history = list(doc.chain_of_custody or [])
+        entry = {
+            "event": event,
+            "actor": actor,
+            "actor_role": actor_role,
+            "actor_id": actor_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "document_version": version if version is not None else (doc.version or 1),
+            "sha256": sha256 or doc.sha256_hash,
+            "justification": justification,
+            "details": details
+        }
+        history.append(entry)
+        doc.chain_of_custody = history
+        return history
+
     def get_case_documents(self, case_id: str, user: UserModel) -> List[DocumentModel]:
         case_obj = self.case_repo.get_by_id(case_id)
         if not case_obj:
@@ -132,6 +160,20 @@ class DocumentService:
             }
         ]
 
+        initial_custody = [
+            {
+                "event": "EVIDENCE_UPLOADED",
+                "actor": user.name,
+                "actor_role": user.role,
+                "actor_id": user.id,
+                "timestamp": now_iso,
+                "document_version": 1,
+                "sha256": computed_sha256,
+                "justification": purpose or "Initial evidence intake",
+                "details": f"Ingested {filename} ({len(content)} bytes)"
+            }
+        ]
+
         # 3. Create document metadata record
         doc_model = DocumentModel(
             id=doc_id,
@@ -143,12 +185,16 @@ class DocumentService:
             version=1,
             version_history=initial_version_history,
             uploaded_by=user.name,
+            uploader_id=user.id,
+            uploader_role=user.role,
             uploaded_at=datetime.now(timezone.utc),
             sha256_hash=computed_sha256,
             blockchain_record_id=f"blk-{uuid.uuid4().hex[:6]}",
             allowed_roles=["Senior Officer", "Investigating Officer", "Forensic Officer", "Prosecutor", "Auditor / Security", "Admin"],
             allowed_purposes=["INVESTIGATION", "LEGAL_REVIEW", "FORENSIC_ANALYSIS", "AUDIT"],
             integrity_status="VERIFIED",
+            verification_status="PENDING_VERIFICATION",
+            chain_of_custody=initial_custody,
             storage_key=safe_key,
             storage_bucket=storage_service.bucket,
             file_size=len(content),
@@ -259,6 +305,28 @@ class DocumentService:
         doc.name = filename
         doc.version_history = current_history
         doc.integrity_status = "VERIFIED"
+        # Reset verification status on new version: previous approval does not apply to new binary
+        doc.verification_status = "PENDING_VERIFICATION"
+        doc.approved_hash = None
+        doc.approved_version = None
+        doc.verified_by = None
+        doc.verifier_id = None
+        doc.verifier_role = None
+        doc.verified_at = None
+        doc.approval_justification = None
+        doc.rejection_reason = None
+
+        self._append_custody_entry(
+            doc,
+            event="EVIDENCE_VERSION_CREATED",
+            actor=user.name,
+            actor_role=user.role,
+            actor_id=user.id,
+            version=next_version,
+            sha256=new_sha256,
+            justification=change_reason,
+            details=f"Version v{next_version} registered ({filename})"
+        )
 
         self.db.add(doc)
         self.db.commit()
@@ -347,6 +415,20 @@ class DocumentService:
         else:
             file_bytes = f"--- [CASETRACE METADATA VIEW FOR {doc.name}] ---".encode("utf-8")
 
+        self._append_custody_entry(
+            doc,
+            event="EVIDENCE_VIEWED",
+            actor=user.name,
+            actor_role=user.role,
+            actor_id=user.id,
+            version=doc.version,
+            sha256=doc.sha256_hash,
+            justification=purpose,
+            details=f"Document '{doc.name}' viewed inline by {user.name}."
+        )
+        self.db.add(doc)
+        self.db.commit()
+
         self.audit_svc.create_log(user, AuditCreate(
             case_id=doc.case_id, document_id=document_id, action="DOCUMENT_VIEW",
             purpose=purpose, result="SUCCESS", risk_level="LOW",
@@ -386,6 +468,20 @@ class DocumentService:
                 file_bytes = f"--- CASETRACE SECURE CONTAINER FOR DOCUMENT {doc.name} ---\nSHA256: {doc.sha256_hash}".encode("utf-8")
         else:
             file_bytes = f"--- CASETRACE METADATA CONTAINER FOR {doc.name} ---\nSHA256: {doc.sha256_hash}".encode("utf-8")
+
+        self._append_custody_entry(
+            doc,
+            event="EVIDENCE_DOWNLOADED",
+            actor=user.name,
+            actor_role=user.role,
+            actor_id=user.id,
+            version=doc.version,
+            sha256=doc.sha256_hash,
+            justification=purpose,
+            details=f"Document '{doc.name}' downloaded by {user.name}."
+        )
+        self.db.add(doc)
+        self.db.commit()
 
         self.audit_svc.create_log(user, AuditCreate(
             case_id=doc.case_id, document_id=document_id, action="DOCUMENT_DOWNLOAD",
@@ -472,6 +568,33 @@ class DocumentService:
 
         verification_result = "INTEGRITY VERIFIED" if match else "INTEGRITY MISMATCH"
 
+        # Record custody and audit event
+        if match:
+            self._append_custody_entry(
+                doc,
+                event="INTEGRITY_VERIFIED",
+                actor=user.name,
+                actor_role=user.role,
+                actor_id=user.id,
+                version=doc.version,
+                sha256=computed_hash,
+                details=details
+            )
+        else:
+            doc.integrity_status = "TAMPERED"
+            self._append_custody_entry(
+                doc,
+                event="INTEGRITY_MISMATCH_DETECTED",
+                actor=user.name,
+                actor_role=user.role,
+                actor_id=user.id,
+                version=doc.version,
+                sha256=computed_hash,
+                details=details
+            )
+        self.db.add(doc)
+        self.db.commit()
+
         self.audit_svc.create_log(user, AuditCreate(
             case_id=doc.case_id, document_id=document_id, action="INTEGRITY_VERIFICATION",
             purpose="AUDIT", result="SUCCESS" if match else "TAMPER_ALERT",
@@ -491,6 +614,171 @@ class DocumentService:
             "match": match,
             "details": details
         }
+
+    def review_document(
+        self,
+        document_id: str,
+        decision: str,
+        user: UserModel,
+        justification: Optional[str] = None,
+        rejection_reason: Optional[str] = None
+    ) -> Dict[str, Any]:
+        doc = self.doc_repo.get_by_id(document_id)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document {document_id} not found."
+            )
+
+        # 1. Authority Check: Only Senior Officer or Admin
+        if user.role not in ["Senior Officer", "Admin"]:
+            self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=document_id, action="UNAUTHORIZED_APPROVAL_ATTEMPT",
+                purpose="ADMINISTRATIVE", result="BLOCKED", risk_level="HIGH",
+                description=f"Unauthorized evidence review attempt by {user.name} ({user.role}): Senior Officer or Admin clearance required."
+            ))
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Clearance Denied: Role '{user.role}' is not authorized to review or approve evidence. Senior Investigating Officer or System Administrator required."
+            )
+
+        # 2. Separation of Duties: Uploader cannot approve their own submission
+        if (doc.uploader_id and user.id == doc.uploader_id) or (doc.uploaded_by and doc.uploaded_by == user.name and user.role != "Admin"):
+            self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=document_id, action="SEPARATION_OF_DUTIES_VIOLATION",
+                purpose="ADMINISTRATIVE", result="BLOCKED", risk_level="HIGH",
+                description=f"Separation of duties violation: {user.name} attempted to self-approve evidence '{doc.name}'."
+            ))
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Separation of duties violation: An officer cannot review or approve their own uploaded evidence."
+            )
+
+        norm_decision = decision.strip().upper()
+        now_dt = datetime.now(timezone.utc)
+        now_iso = now_dt.isoformat()
+
+        if norm_decision == "VERIFIED":
+            if not justification or not justification.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Approval confirmation / justification is required."
+                )
+            doc.verification_status = "VERIFIED"
+            doc.verified_by = user.name
+            doc.verifier_id = user.id
+            doc.verifier_role = user.role
+            doc.verified_at = now_dt
+            doc.approval_justification = justification.strip()
+            doc.rejection_reason = None
+            doc.approved_hash = doc.sha256_hash
+            doc.approved_version = doc.version or 1
+
+            self._append_custody_entry(
+                doc,
+                event="EVIDENCE_VERIFIED",
+                actor=user.name,
+                actor_role=user.role,
+                actor_id=user.id,
+                version=doc.version,
+                sha256=doc.sha256_hash,
+                justification=justification.strip(),
+                details=f"Evidence approved by {user.name} ({user.role}) for version v{doc.version}."
+            )
+
+            audit_log = self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=doc.id, action="EVIDENCE_VERIFIED",
+                purpose="ADMINISTRATIVE", result="SUCCESS", risk_level="LOW",
+                description=f"Evidence '{doc.name}' (v{doc.version}) approved and verified by {user.name} ({user.role}). Hash: {doc.sha256_hash[:16]}..."
+            ))
+
+            self.db.add(doc)
+            self.db.commit()
+            self.db.refresh(doc)
+
+            return {
+                "document_id": doc.id,
+                "case_id": doc.case_id,
+                "verification_status": "VERIFIED",
+                "verified_by": user.name,
+                "verifier_id": user.id,
+                "verifier_role": user.role,
+                "verified_at": now_iso,
+                "decision": "VERIFIED",
+                "justification": doc.approval_justification,
+                "rejection_reason": None,
+                "approved_hash": doc.approved_hash,
+                "approved_version": doc.approved_version,
+                "audit_event_id": audit_log.event_id if audit_log else None
+            }
+
+        elif norm_decision == "REJECTED":
+            reason = (rejection_reason or justification or "").strip()
+            if not reason:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Rejection reason is required when rejecting evidence."
+                )
+            doc.verification_status = "REJECTED"
+            doc.verified_by = user.name
+            doc.verifier_id = user.id
+            doc.verifier_role = user.role
+            doc.verified_at = now_dt
+            doc.rejection_reason = reason
+            doc.approval_justification = None
+            doc.approved_hash = None
+            doc.approved_version = None
+
+            self._append_custody_entry(
+                doc,
+                event="EVIDENCE_REJECTED",
+                actor=user.name,
+                actor_role=user.role,
+                actor_id=user.id,
+                version=doc.version,
+                sha256=doc.sha256_hash,
+                justification=reason,
+                details=f"Evidence rejected by {user.name} ({user.role}). Reason: {reason}"
+            )
+
+            audit_log = self.audit_svc.create_log(user, AuditCreate(
+                case_id=doc.case_id, document_id=doc.id, action="EVIDENCE_REJECTED",
+                purpose="ADMINISTRATIVE", result="REJECTED", risk_level="MEDIUM",
+                description=f"Evidence '{doc.name}' rejected by {user.name} ({user.role}). Reason: {reason}"
+            ))
+
+            self.db.add(doc)
+            self.db.commit()
+            self.db.refresh(doc)
+
+            return {
+                "document_id": doc.id,
+                "case_id": doc.case_id,
+                "verification_status": "REJECTED",
+                "verified_by": user.name,
+                "verifier_id": user.id,
+                "verifier_role": user.role,
+                "verified_at": now_iso,
+                "decision": "REJECTED",
+                "justification": None,
+                "rejection_reason": reason,
+                "approved_hash": None,
+                "approved_version": None,
+                "audit_event_id": audit_log.event_id if audit_log else None
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid decision '{decision}'. Must be 'VERIFIED' or 'REJECTED'."
+            )
+
+    def get_document_custody(self, document_id: str, user: UserModel) -> List[Dict[str, Any]]:
+        doc, decision = self.get_document_by_id(document_id, user, action="VIEW", purpose="AUDIT")
+        if not doc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document {document_id} not found.")
+        if not decision["allowed"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision["reason"])
+        return doc.chain_of_custody or []
 
     def delete_document(
         self, document_id: str, user: UserModel, purpose: Optional[str] = "ADMINISTRATIVE"

@@ -11,6 +11,7 @@ class UserBase(BaseModel):
     avatar: str
     assigned_case_ids: List[str] = []
     status: str = "ACTIVE"
+    is_totp_enabled: bool = False
 
 class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
@@ -20,6 +21,11 @@ class LoginRequest(BaseModel):
     password: str
 
 class Token(BaseModel):
-    access_token: str
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
-    user: UserResponse
+    expires_in: Optional[int] = None
+    user: Optional[UserResponse] = None
+    requires_2fa: bool = False
+    temp_token: Optional[str] = None
+    message: Optional[str] = None

@@ -36,8 +36,24 @@ class StorageService:
                     retries={'max_attempts': 1}
                 )
             )
+            # Safe startup bucket verification
+            try:
+                self.client.head_bucket(Bucket=self.bucket)
+                logger.info(f"MinIO object storage initialized and bucket '{self.bucket}' verified.")
+            except ClientError as b_err:
+                code = b_err.response.get('Error', {}).get('Code')
+                if code in ('404', 'NoSuchBucket'):
+                    try:
+                        self.client.create_bucket(Bucket=self.bucket)
+                        logger.info(f"MinIO bucket '{self.bucket}' created successfully on startup.")
+                    except Exception as cr_err:
+                        logger.warning(f"Could not auto-create MinIO bucket: {cr_err}")
+                else:
+                    logger.warning(f"MinIO bucket access notice: {b_err}")
+            except Exception as conn_err:
+                logger.warning(f"MinIO unreachable at startup ({conn_err}). Using local fallback.")
         except Exception as err:
-            logger.warning(f"S3 client initialization notice: {err}")
+            logger.warning(f"S3 client initialization notice: {err}. Local fallback storage active.")
             self.client = None
 
     def _get_fallback_filepath(self, storage_key: str) -> str:
@@ -173,4 +189,39 @@ class StorageService:
             "bucket": self.bucket
         }
 
+    def check_connection(self) -> dict:
+        """Safe diagnostic check for administrative diagnostics without exposing keys or credentials."""
+        if self.client:
+            try:
+                self.client.head_bucket(Bucket=self.bucket)
+                return {
+                    "status": "Connected",
+                    "provider": "MinIO",
+                    "bucket": self.bucket,
+                    "message": "Storage connection successful"
+                }
+            except ClientError as err:
+                code = err.response.get('Error', {}).get('Code')
+                if code in ('404', 'NoSuchBucket'):
+                    try:
+                        self.client.create_bucket(Bucket=self.bucket)
+                        return {
+                            "status": "Connected",
+                            "provider": "MinIO",
+                            "bucket": self.bucket,
+                            "message": "Storage connection successful"
+                        }
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        return {
+            "status": "Fallback",
+            "provider": "Local Fallback",
+            "bucket": self.bucket,
+            "message": "Storage connection unavailable — local fallback active"
+        }
+
 storage_service = StorageService()
+

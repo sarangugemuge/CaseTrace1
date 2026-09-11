@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { getRoleLabel } from '../../lib/roles';
 import {
   Loader2,
   FolderLock,
@@ -173,7 +174,7 @@ export const PermissionDeniedState: React.FC<PermissionDeniedStateProps> = ({
             <span>POLICY: {policyId}</span>
           </div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            Access Restricted for Role: {role}
+            Access Restricted for Role: {getRoleLabel(role as any, 'bilingual')}
           </h2>
           <p className="text-xs text-slate-700 dark:text-slate-300 font-sans leading-relaxed">
             {reason}
@@ -185,10 +186,10 @@ export const PermissionDeniedState: React.FC<PermissionDeniedStateProps> = ({
       <div className="bg-white/80 dark:bg-navy-950/80 border border-rose-200 dark:border-rose-900/60 rounded-lg p-3.5 text-xs font-sans text-slate-600 dark:text-slate-300 space-y-1.5">
         <div className="font-bold text-slate-900 dark:text-white font-mono text-[11px] flex items-center gap-1.5">
           <UserCheck className="w-3.5 h-3.5 text-blue-500" />
-          <span>Role-Based Access Control (RBAC): Access is controlled according to the user's role.</span>
+          <span>Role-Based Access Control (RBAC): Statutory clearance enforced.</span>
         </div>
         <p className="text-[11px] leading-relaxed">
-          In this SIH evaluation demo, you can switch personas using the <strong>Demo Role Switcher</strong> in the top navigation bar (e.g. to <em>Senior Officer</em> or <em>Lead Investigator</em>) to test authorized operations on this case.
+          Under statutory protocol, access to this case document or artifact requires appropriate judicial or investigative clearance. Please contact your System Administrator if you believe this restriction is in error.
         </p>
       </div>
 

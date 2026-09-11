@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { getRoleLabel } from '../../../lib/roles';
 import { AccessAuditLog } from '../../../components/security/AccessAuditLog';
 import { RiskScoreCard } from '../../../components/security/RiskScoreCard';
 import { ShieldAlert, Activity } from 'lucide-react';
@@ -17,7 +18,9 @@ export default function AuditPage() {
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
             <span>OVERSIGHT & AUDIT STREAM:</span>
-            <span className="text-purple-700 dark:text-purple-400 font-bold uppercase">{currentUser.role} ACCESS</span>
+            <span className="text-purple-700 dark:text-purple-400 font-bold uppercase">
+              {getRoleLabel(currentUser.role, 'bilingual')} CLEARANCE
+            </span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Security Audit Trail & Risk Operations

@@ -1,6 +1,7 @@
 export type Role =
   | 'Senior Officer'
   | 'Investigating Officer'
+  | 'Cyber Crime Investigating Officer'
   | 'Forensic Officer'
   | 'Prosecutor'
   | 'Court User'
@@ -31,10 +32,38 @@ export interface User {
   avatar: string;
   assignedCaseIds: string[];
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  isTotpEnabled?: boolean;
 }
 
 export interface Session {
   user: User;
-  token: string; // Mock token
+  token: string;
   expiresAt: string;
+}
+
+export interface LoginResult {
+  requires2fa?: boolean;
+  tempToken?: string;
+  user?: User;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  message?: string;
+}
+
+export interface TotpSetupData {
+  secret: string;
+  qrCode: string;
+  manualEntryKey: string;
+  issuer: string;
+}
+
+export interface SessionStatus {
+  active: boolean;
+  userId: string;
+  role: Role;
+  isTotpEnabled: boolean;
+  lastAuthenticatedAt?: string;
+  inactivityTimeoutSeconds: number;
+  maxSessionLifetimeSeconds: number;
 }

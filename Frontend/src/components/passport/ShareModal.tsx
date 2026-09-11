@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Document } from '../../types/document';
 import { Role } from '../../types/auth';
+import { getRoleLabel } from '../../lib/roles';
 import { Share2, CheckCircle } from 'lucide-react';
 
 interface ShareModalProps {
@@ -34,6 +35,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const roles: Role[] = [
     'Senior Officer',
     'Investigating Officer',
+    'Cyber Crime Investigating Officer',
     'Forensic Officer',
     'Prosecutor',
     'Court User',
@@ -41,7 +43,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Share Case Document (Simulated Request)">
+    <Modal isOpen={isOpen} onClose={onClose} title="Share Case Document (Authorized Grant)">
       <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
         <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 p-3 rounded-lg text-blue-900 dark:text-blue-200">
           <p className="font-bold flex items-center gap-1.5">
@@ -49,7 +51,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             Share Authorized Artifact Access
           </p>
           <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
-            Sharing <span className="text-slate-900 dark:text-white font-bold">{document.name}</span> with another role clearancer will issue a temporary, time-bound access grant logged in the audit trail.
+            Sharing <span className="text-slate-900 dark:text-white font-bold">{document.name}</span> with another role clearance tier will issue a temporary, time-bound access grant logged in the audit trail.
           </p>
         </div>
 
@@ -62,7 +64,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           >
             {roles.map((r) => (
               <option key={r} value={r}>
-                {r}
+                {getRoleLabel(r, 'bilingual')}
               </option>
             ))}
           </select>

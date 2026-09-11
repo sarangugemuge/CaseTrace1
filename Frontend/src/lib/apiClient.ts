@@ -1,4 +1,4 @@
-import { User, Role } from '../types/auth';
+import { User, Role, LoginResult, TotpSetupData, SessionStatus } from '../types/auth';
 import { CasePassport } from '../types/case';
 import { Document } from '../types/document';
 import { AuditEntry, AuditSummary } from '../types/audit';
@@ -105,6 +105,25 @@ async function fetchWithFallback<T>(
     return mockFallback();
   }
 
+  // 1. Inactivity guard: if inactive > 15 minutes, clear session and redirect
+  if (authService.isInactive(15)) {
+    authService.clearSession();
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login?reason=inactivity';
+    }
+    return mockFallback();
+  }
+  authService.updateLastActive();
+
+  // 2. Pre-emptive refresh if access token expired or expiring soon (<30s)
+  if (authService.isAccessTokenExpired(30) && authService.getRefreshToken()) {
+    try {
+      await apiClient.refreshToken();
+    } catch {
+      // Continue with current credentials if refresh fails
+    }
+  }
+
   try {
     const controller = new AbortController();
     const timeoutMs = options.body instanceof FormData ? 30000 : 8000;
@@ -124,13 +143,25 @@ async function fetchWithFallback<T>(
       headers['Content-Type'] = 'application/json';
     }
 
-    const res = await fetch(`${API_BASE_URL}${url}`, {
+    let res = await fetch(`${API_BASE_URL}${url}`, {
       ...options,
       headers,
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
+
+    // 3. If 401 Unauthorized, attempt a one-time token refresh and retry
+    if (res.status === 401 && authService.getRefreshToken()) {
+      const refreshed = await apiClient.refreshToken();
+      if (refreshed) {
+        headers['Authorization'] = `Bearer ${refreshed.accessToken}`;
+        res = await fetch(`${API_BASE_URL}${url}`, {
+          ...options,
+          headers,
+        });
+      }
+    }
 
     if (!res.ok) {
       console.warn(`API ${url} returned status ${res.status}. Falling back to mock layer.`);
@@ -171,9 +202,10 @@ export const apiClient = {
     }
   },
 
-  async login(email: string, role?: Role, password: string = 'password123'): Promise<User> {
+  async login(email: string, role?: Role, password: string = 'password123'): Promise<LoginResult> {
     if (API_MODE === 'mock') {
-      return authService.login(email, role);
+      const user = authService.login(email, role);
+      return { user, requires2fa: false, accessToken: 'mock-token' };
     }
     try {
       const controller = new AbortController();
@@ -187,13 +219,212 @@ export const apiClient = {
       clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
-        const user = authService.login(data.user?.email || email, data.user?.role || role, data.access_token);
-        return user;
+        if (data.requires_2fa) {
+          authService.setTemp2faToken(data.temp_token);
+          return {
+            requires2fa: true,
+            tempToken: data.temp_token,
+            message: data.message,
+          };
+        }
+        authService.saveSession(
+          data.user,
+          data.access_token,
+          data.refresh_token,
+          data.expires_in || 600
+        );
+        const mappedUser = authService.getCurrentUser() || data.user;
+        return {
+          user: mappedUser,
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
+          requires2fa: false,
+        };
       }
-      return authService.login(email, role);
-    } catch {
-      return authService.login(email, role);
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Invalid institutional credentials.');
+    } catch (err: any) {
+      if (err.message && err.message !== 'Failed to fetch') {
+        throw err;
+      }
+      const user = authService.login(email, role);
+      return { user, requires2fa: false, accessToken: 'mock-token' };
     }
+  },
+
+  async verify2fa(tempToken: string, code: string, isRecoveryCode: boolean = false): Promise<User> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        temp_token: tempToken,
+        code,
+        is_recovery_code: isRecoveryCode,
+      }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Failed to verify two-factor authentication code.');
+    }
+    const data = await res.json();
+    authService.saveSession(
+      data.user,
+      data.access_token,
+      data.refresh_token,
+      data.expires_in || 600
+    );
+    authService.clearTemp2faToken();
+    return authService.getCurrentUser() || data.user;
+  },
+
+  async setup2fa(): Promise<TotpSetupData> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/setup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authService.getAccessToken()}`,
+      },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to initialize 2FA setup.');
+    }
+    const data = await res.json();
+    return {
+      secret: data.secret,
+      qrCode: data.qr_code,
+      manualEntryKey: data.manual_entry_key,
+      issuer: data.issuer,
+    };
+  },
+
+  async enable2fa(code: string): Promise<{ success: boolean; recoveryCodes: string[] }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/enable`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authService.getAccessToken()}`,
+      },
+      body: JSON.stringify({ code }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to activate 2FA.');
+    }
+    const data = await res.json();
+    const cur = authService.getCurrentUser();
+    if (cur) {
+      authService.saveSession({ ...cur, isTotpEnabled: true }, authService.getAccessToken() || '', authService.getRefreshToken() || '');
+    }
+    return {
+      success: data.success,
+      recoveryCodes: data.recovery_codes,
+    };
+  },
+
+  async disable2fa(password?: string, code?: string): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/disable`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authService.getAccessToken()}`,
+      },
+      body: JSON.stringify({ password, code }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to disable 2FA.');
+    }
+    const cur = authService.getCurrentUser();
+    if (cur) {
+      authService.saveSession({ ...cur, isTotpEnabled: false }, authService.getAccessToken() || '', authService.getRefreshToken() || '');
+    }
+    return { success: true };
+  },
+
+  async regenerateRecoveryCodes(): Promise<{ recoveryCodes: string[] }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/recovery-codes/regenerate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authService.getAccessToken()}`,
+      },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to regenerate recovery codes.');
+    }
+    const data = await res.json();
+    return { recoveryCodes: data.recovery_codes };
+  },
+
+  async refreshToken(): Promise<{ accessToken: string; refreshToken: string } | null> {
+    const currentRefresh = authService.getRefreshToken();
+    if (!currentRefresh) return null;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: currentRefresh }),
+      });
+      if (!res.ok) {
+        authService.clearSession();
+        return null;
+      }
+      const data = await res.json();
+      authService.updateTokens(data.access_token, data.refresh_token, data.expires_in || 600);
+      return { accessToken: data.access_token, refreshToken: data.refresh_token };
+    } catch {
+      return null;
+    }
+  },
+
+  async logout(): Promise<void> {
+    const token = authService.getAccessToken();
+    if (token) {
+      try {
+        await fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      } catch {
+        // Best effort logout
+      }
+    }
+    authService.clearSession();
+  },
+
+  async reauthenticate(password?: string, code?: string): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/reauthenticate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authService.getAccessToken()}`,
+      },
+      body: JSON.stringify({ password, code }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Reauthentication failed.');
+    }
+    return { success: true };
+  },
+
+  async getSessionStatus(): Promise<SessionStatus> {
+    return fetchWithFallback(
+      '/api/auth/session/status',
+      {},
+      () => ({
+        active: true,
+        userId: authService.getCurrentUser()?.id || 'usr-001',
+        role: authService.getCurrentUser()?.role || 'Senior Officer',
+        isTotpEnabled: false,
+        inactivityTimeoutSeconds: 900,
+        maxSessionLifetimeSeconds: 28800,
+      })
+    );
   },
 
   async getCases(user: User): Promise<CasePassport[]> {

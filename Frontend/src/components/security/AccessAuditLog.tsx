@@ -7,6 +7,7 @@ import { AuditEntry } from '../../types/audit';
 import { Activity, Search, ShieldCheck, ShieldAlert, Filter, RefreshCw } from 'lucide-react';
 import { RiskBadge } from '../common/Badge';
 import { LoadingState, EmptyState } from '../common/UXStates';
+import { getRoleLabel } from '../../lib/roles';
 
 export const AccessAuditLog: React.FC<{ filterCaseId?: string }> = ({ filterCaseId }) => {
   const [search, setSearch] = useState('');
@@ -93,14 +94,15 @@ export const AccessAuditLog: React.FC<{ filterCaseId?: string }> = ({ filterCase
             onChange={(e) => setRoleFilter(e.target.value)}
             className="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
           >
-            <option value="ALL">All Roles</option>
-            <option value="Senior Officer">Senior Officer</option>
-            <option value="Investigating Officer">Investigating Officer</option>
-            <option value="Forensic Officer">Forensic Officer</option>
-            <option value="Prosecutor">Prosecutor</option>
-            <option value="Court User">Court User</option>
-            <option value="Auditor / Security">Auditor / Security</option>
-            <option value="Admin">Admin</option>
+            <option value="ALL">All Roles / सभी भूमिकाएँ</option>
+            <option value="Senior Officer">वरिष्ठ अन्वेषण अधिकारी (Senior Investigating Officer)</option>
+            <option value="Investigating Officer">अन्वेषण अधिकारी (Investigating Officer)</option>
+            <option value="Cyber Crime Investigating Officer">साइबर अपराध अन्वेषण अधिकारी (Cyber Crime Investigating Officer)</option>
+            <option value="Forensic Officer">डिजिटल फोरेंसिक अधिकारी (Digital Forensics Officer)</option>
+            <option value="Prosecutor">सरकारी अभियोजक (Public Prosecutor)</option>
+            <option value="Court User">न्यायिक अधिकारी (Judicial Officer)</option>
+            <option value="Auditor / Security">सुरक्षा एवं लेखा-परीक्षण अधिकारी (Security & Audit Officer)</option>
+            <option value="Admin">प्रणाली प्रशासक (System Administrator)</option>
           </select>
         </div>
       </div>
@@ -115,7 +117,7 @@ export const AccessAuditLog: React.FC<{ filterCaseId?: string }> = ({ filterCase
           title="No Audit Records Found"
           description={
             search || roleFilter !== 'ALL'
-              ? `No audit logs matched your search "${search || 'All keywords'}" for role "${roleFilter}". Try resetting your filters.`
+              ? `No audit logs matched your search "${search || 'All keywords'}" for role "${getRoleLabel(roleFilter)}". Try resetting your filters.`
               : 'No audit records have been generated in this scope yet. Events are logged automatically on every access and verification.'
           }
           icon={<Activity className="w-6 h-6 text-slate-400" />}
@@ -150,7 +152,7 @@ export const AccessAuditLog: React.FC<{ filterCaseId?: string }> = ({ filterCase
                   </td>
                   <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white whitespace-nowrap">
                     {log.userName}
-                    <span className="block text-[10px] text-slate-500 font-normal">{log.role}</span>
+                    <span className="block text-[10px] text-blue-600 dark:text-blue-400 font-normal">{getRoleLabel(log.role, 'bilingual')}</span>
                   </td>
                   <td className="px-4 py-3 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{log.action}</td>
                   <td className="px-4 py-3 text-[11px] text-slate-500 whitespace-nowrap">

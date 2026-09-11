@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, JSON, DateTime, Index
+from sqlalchemy import Column, String, Boolean, JSON, DateTime, Index
 from datetime import datetime, timezone
 from backend.app.db.database import Base
 
@@ -15,7 +15,17 @@ class UserModel(Base):
     avatar = Column(String, nullable=False)
     assigned_case_ids = Column(JSON, nullable=True, default=list)
     status = Column(String, default="ACTIVE")
+    
+    # Two-Factor Authentication (TOTP & Recovery Codes)
+    totp_secret = Column(String, nullable=True)
+    totp_pending_secret = Column(String, nullable=True)
+    is_totp_enabled = Column(Boolean, default=False, nullable=False)
+    recovery_codes = Column(JSON, nullable=True, default=list)
+    
+    # Session & Security Tracking
+    last_authenticated_at = Column(DateTime, nullable=True, default=lambda: datetime.now(timezone.utc))
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
     __table_args__ = (
         Index("idx_users_role_status", "role", "status"),
     )

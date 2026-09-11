@@ -23,13 +23,29 @@ class DocumentModel(Base):
     description = Column(String, nullable=True)
     notes = Column(String, nullable=True)
 
-    # Phase 6 Storage Metadata Fields
+    # Storage & Integrity Metadata
     storage_key = Column(String, nullable=True, index=True)
     storage_bucket = Column(String, nullable=True)
     file_size = Column(Integer, nullable=True, default=0)
     mime_type = Column(String, nullable=True, default="application/octet-stream")
     original_filename = Column(String, nullable=True)
+
+    # Evidence Verification & Approval Workflow
+    uploader_id = Column(String, nullable=True, index=True)
+    uploader_role = Column(String, nullable=True)
+    verification_status = Column(String, default="PENDING_VERIFICATION", index=True)
+    verified_by = Column(String, nullable=True)
+    verifier_id = Column(String, nullable=True)
+    verifier_role = Column(String, nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    approval_justification = Column(String, nullable=True)
+    rejection_reason = Column(String, nullable=True)
+    approved_hash = Column(String, nullable=True)
+    approved_version = Column(Integer, nullable=True)
+    chain_of_custody = Column(JSON, nullable=True, default=list)
+
     __table_args__ = (
         Index("idx_docs_case_sensitivity", "case_id", "sensitivity"),
         Index("idx_docs_storage_key", "storage_key"),
+        Index("idx_docs_verification_status", "verification_status"),
     )

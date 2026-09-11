@@ -4,7 +4,7 @@ import React from 'react';
 import { CasePassport } from '../../types/case';
 import { UserCheck, Shield } from 'lucide-react';
 import { MOCK_USERS } from '../../mock/users';
-import { getRoleLabel } from '../../lib/roles';
+import { getRoleLabel, getRoleHindiLabel } from '../../lib/roles';
 
 export const PeopleTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) => {
   const assigned = MOCK_USERS.filter((u) => caseData.assignedUsers.includes(u.id));
@@ -29,7 +29,12 @@ export const PeopleTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) =>
             </div>
             <div>
               <div className="font-bold text-slate-900 dark:text-white text-sm">{person.name}</div>
-              <div className="text-xs font-mono text-blue-600 dark:text-blue-400 font-semibold">{getRoleLabel(person.role)}</div>
+              <div className="text-xs font-mono text-blue-600 dark:text-blue-400 font-semibold">
+                {getRoleLabel(person.role)}
+                <span className="text-slate-500 dark:text-slate-400 font-sans ml-1.5 font-normal">
+                  ({getRoleHindiLabel(person.role)})
+                </span>
+              </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400">{person.department} • {person.designation}</div>
             </div>
           </div>
@@ -38,3 +43,4 @@ export const PeopleTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) =>
     </div>
   );
 };
+

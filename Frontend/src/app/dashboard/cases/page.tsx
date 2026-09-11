@@ -11,7 +11,6 @@ import { CasePassport } from '../../../types/case';
 import { SensitivityBadge } from '../../../components/common/Badge';
 import { CreateCaseModal } from '../../../components/passport/CreateCaseModal';
 import {
-  BackendUnavailableBanner,
   EmptyState,
   LoadingState,
   SuccessBanner,
@@ -21,7 +20,6 @@ import {
   Search,
   ArrowRight,
   Plus,
-  Lock,
   CheckCircle2,
 } from 'lucide-react';
 
@@ -93,7 +91,7 @@ export default function CasesPage() {
           <div className="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
             <span>ROLE CLEARANCE:</span>
             <span className="text-emerald-700 dark:text-emerald-400 uppercase font-bold">
-              {getRoleLabel(currentUser.role)}
+              {getRoleLabel(currentUser.role, 'bilingual')}
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -133,8 +131,8 @@ export default function CasesPage() {
             <option value="VERDICT_RENDERED">Verdict Rendered</option>
           </select>
 
-          {/* Entry Point for Case Creation */}
-          {canCreate ? (
+          {/* Entry Point for Case Creation - Silently displayed only for authorized roles */}
+          {canCreate && (
             <button
               onClick={() => setCreateModalOpen(true)}
               aria-label="Add New Incident"
@@ -143,14 +141,6 @@ export default function CasesPage() {
               <Plus className="w-4 h-4" />
               <span>+ Add New Incident</span>
             </button>
-          ) : (
-            <div
-              title="Authorization required to create new incident reports"
-              className="px-3 py-1.5 bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-400 rounded-lg flex items-center gap-1.5 text-[11px] font-mono cursor-not-allowed border border-slate-200 dark:border-navy-700"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Creation: Restricted</span>
-            </div>
           )}
         </div>
       </div>
@@ -168,7 +158,7 @@ export default function CasesPage() {
       {loading && cases.length === 0 ? (
         <LoadingState
           message="Loading digital case passports..."
-          description="Accessing case registry and checking role clearance (RBAC: Access is controlled according to the user's role)."
+          description="Accessing case registry and checking role clearance."
         />
       ) : displayedCases.length === 0 ? (
         <EmptyState
@@ -176,7 +166,7 @@ export default function CasesPage() {
           description={
             search || stageFilter !== 'ALL'
               ? `No case passports matched your query "${search || 'All keywords'}" at stage "${stageFilter}". Try adjusting keywords or resetting your search filter.`
-              : `No digital case passports are currently assigned to role ${currentUser.role}. Access is controlled according to the user's role (RBAC). In Demo Mode, you can switch personas via the top navbar.`
+              : `No digital case passports are currently assigned to clearance ${getRoleLabel(currentUser.role, 'bilingual')}. Access is controlled according to statutory role clearance.`
           }
           icon={<FolderLock className="w-6 h-6" />}
           actionText={canCreate && !search ? 'New Case Passport' : undefined}

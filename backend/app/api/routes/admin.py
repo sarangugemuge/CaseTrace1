@@ -11,7 +11,8 @@ from backend.app.schemas.role import (
     RoleCreate,
     RoleUpdate,
     SystemConfigResponse,
-    SystemConfigUpdate
+    SystemConfigUpdate,
+    StorageDiagnosticResponse
 )
 from backend.app.dependencies.auth import get_current_user
 from backend.app.services.storage_service import storage_service
@@ -165,12 +166,15 @@ def get_system_config(
     current_user: UserModel = Depends(require_admin_user)
 ):
     db_info = verify_db_connection()
-    backend_type = "MinIO S3 Object Storage" if storage_service.client is not None else "Resilient Local Object Store (Fallback)"
+    diag = storage_service.check_connection()
+    backend_type = "MinIO S3 Object Storage" if diag["status"] == "Connected" else "Resilient Local Object Store (Fallback)"
 
     return SystemConfigResponse(
         storage_backend=backend_type,
         storage_bucket=storage_service.bucket,
         storage_endpoint=settings.STORAGE_ENDPOINT,
+        storage_provider=diag["provider"],
+        storage_status=diag["status"],
         db_dialect=db_info.get("dialect", "sqlite"),
         db_status=db_info.get("status", "connected"),
         sha256_enforcement=_SYSTEM_CONFIG["sha256_enforcement"],
@@ -178,6 +182,17 @@ def get_system_config(
         audit_retention_days=_SYSTEM_CONFIG["audit_retention_days"],
         active_sessions_count=len(db.query(UserModel).all())
     )
+
+@router.post("/storage/test", response_model=StorageDiagnosticResponse)
+def test_storage_connection(
+    current_user: UserModel = Depends(require_admin_user)
+):
+    """
+    Test storage connectivity safely for administrators.
+    Returns provider, bucket, status, and human-readable message without leaking secrets or endpoints.
+    """
+    res = storage_service.check_connection()
+    return StorageDiagnosticResponse(**res)
 
 @router.put("/config", response_model=SystemConfigResponse)
 def update_system_config(

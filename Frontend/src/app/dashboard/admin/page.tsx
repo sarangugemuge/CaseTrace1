@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getRoleLabel } from '../../../lib/roles';
+import { getRoleLabel, getRoleHindiLabel } from '../../../lib/roles';
 import { apiClient } from '../../../lib/apiClient';
 import { RoleRecord, SystemConfig } from '../../../types/admin';
 import { PermissionDeniedState, LoadingState } from '../../../components/common/UXStates';
@@ -284,7 +284,7 @@ export default function AdminPage() {
           }`}
         >
           <Settings className="w-4 h-4" />
-          System & Storage Configuration
+          System Diagnostics & Configuration
         </button>
       </div>
 
@@ -297,7 +297,7 @@ export default function AdminPage() {
                 Configured System Roles & Permissions Matrix
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Roles configured in PostgreSQL/SQLite database with granular action allowances.
+                Roles configured in authoritative system database with granular action allowances.
               </p>
             </div>
             <button
@@ -330,7 +330,7 @@ export default function AdminPage() {
                     <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-navy-950/50 transition-colors">
                       <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-white">
                         <div className="flex items-center gap-2">
-                          <span>{r.name}</span>
+                          <span>{getRoleLabel(r.name, 'english')}</span>
                           {r.is_system && (
                             <span className="text-[10px] bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded font-mono">
                               SYSTEM
@@ -338,9 +338,10 @@ export default function AdminPage() {
                           )}
                         </div>
                         <div className="text-[11px] font-sans font-normal text-blue-600 dark:text-blue-400 mt-0.5">
-                          {getRoleLabel(r.name as any)}
+                          {getRoleHindiLabel(r.name)}
                         </div>
                       </td>
+
                       <td className="px-4 py-3.5 text-slate-500 font-bold">{r.role_key}</td>
                       <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 font-sans max-w-xs truncate" title={r.description}>
                         {r.description || '—'}

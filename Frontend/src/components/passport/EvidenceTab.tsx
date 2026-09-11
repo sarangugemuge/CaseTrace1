@@ -60,7 +60,7 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
       type: 'E01 Raw Forensic Dump',
       hash: 'bf5b79647228807d8955219488a08c02c636f1c407559ed5a4bb8e84a20b0805',
       sensitivity: 'FORENSIC',
-      uploader: 'Dr. Alex Mercer (Forensic Officer)',
+      uploader: 'Dr. Alex Mercer (डिजिटल फोरेंसिक अधिकारी • Digital Forensics Officer)',
       timestamp: '2026-03-01T16:45:00Z',
       status: 'INTEGRITY VERIFIED',
     },
@@ -70,7 +70,7 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
       type: 'CSV / Financial Records',
       hash: '7f83b1657ff1fc53b92dc18148a1d65dfc61dd3002532966737170495f80185d',
       sensitivity: 'CONFIDENTIAL',
-      uploader: 'Insp. Sarah Jenkins (Investigating Officer)',
+      uploader: 'Insp. Sarah Jenkins (अन्वेषण अधिकारी • Investigating Officer)',
       timestamp: '2026-02-10T14:30:00Z',
       status: 'INTEGRITY VERIFIED',
     },
@@ -80,11 +80,12 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
       type: 'MEMRAW Memory File',
       hash: 'a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
       sensitivity: 'TOP_SECRET',
-      uploader: 'Dr. Alex Mercer (Forensic Officer)',
+      uploader: 'Dr. Alex Mercer (डिजिटल फोरेंसिक अधिकारी • Digital Forensics Officer)',
       timestamp: '2026-03-02T11:20:00Z',
       status: 'INTEGRITY VERIFIED',
     },
   ];
+
 
   // Map case documents that are marked as evidence or forensic categories
   const forensicCats = ['EVIDENCE', 'SYSTEM_IMAGE', 'FORENSIC_REPORT', 'EVIDENCE_PHOTO', 'COURT_EXHIBIT'];
@@ -339,16 +340,17 @@ export const EvidenceTab: React.FC<EvidenceTabProps> = ({
           <div className="space-y-2">
             <h5 className="font-bold text-slate-900 dark:text-white font-mono flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-              2. Prototype Ledger vs. Production Blockchain
+              2. Immutable Chronological Audit Ledger
             </h5>
             <p>
-              To ensure that even an administrator cannot quietly replace the registered hash, the hash is anchored with a timestamp into a <strong>tamper-evident chronological ledger block</strong>.
+              To ensure that registered cryptographic digests cannot be quietly substituted or erased, every SHA-256 fingerprint is registered into an <strong>immutable, time-stamped audit ledger</strong>.
             </p>
             <p>
-              In this prototype demonstration, CaseTrace utilizes a deterministic cryptographically chained record to demonstrate ledger immutability without requiring a live public cryptocurrency network.
-              Every verification event is immutably audited with officer identity, role clearance, and exact timestamp.
+              CaseTrace anchors evidence fingerprints chronologically to guarantee evidentiary chain-of-custody.
+              Every verification event, inspection, or custody transfer is immutably logged with officer identity, role clearance, and exact timestamp.
             </p>
           </div>
+
         </div>
       </div>
 

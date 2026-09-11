@@ -29,10 +29,18 @@ class RoleResponse(RoleBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class StorageDiagnosticResponse(BaseModel):
+    status: str  # "Connected" | "Fallback"
+    provider: str  # "MinIO" | "Local Fallback"
+    bucket: str
+    message: str
+
 class SystemConfigResponse(BaseModel):
     storage_backend: str
     storage_bucket: str
     storage_endpoint: str
+    storage_provider: Optional[str] = "MinIO"
+    storage_status: Optional[str] = "Connected"
     db_dialect: str
     db_status: str
     sha256_enforcement: str

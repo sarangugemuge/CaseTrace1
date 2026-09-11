@@ -82,7 +82,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
       setIncidentTime('10:30');
       setPriority('HIGH');
       setClassification('CONFIDENTIAL');
-      setLeadInvestigator(currentUser?.name || 'Insp. Sarah Jenkins');
+      setLeadInvestigator(currentUser?.name || 'Insp. Rajesh Kumar');
       setAssignedTeam('Cyber Investigation Team Alpha');
       setValidationErrors({});
       setServerError(null);
@@ -456,7 +456,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               <input
                 id="create-case-lead"
                 type="text"
-                placeholder="e.g. Insp. Sarah Jenkins"
+                placeholder="e.g. Insp. Rajesh Kumar"
                 value={leadInvestigator}
                 onChange={(e) => {
                   setLeadInvestigator(e.target.value);

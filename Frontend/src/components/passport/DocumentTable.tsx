@@ -57,7 +57,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
         description.trim() || undefined,
         notes.trim() || undefined
       );
-      setUploadMessage({ type: 'success', text: `Document '${selectedFile.name}' uploaded securely to S3 storage.` });
+      setUploadMessage({ type: 'success', text: `Document '${selectedFile.name}' uploaded and registered securely.` });
       setSelectedFile(null);
       setDescription('');
       setNotes('');
@@ -310,7 +310,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold flex items-center gap-2 disabled:opacity-50"
             >
               {isUploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              {isUploading ? 'Uploading to S3...' : 'Upload Artifact'}
+              {isUploading ? 'Uploading Artifact...' : 'Upload Artifact'}
             </button>
           </div>
         </form>

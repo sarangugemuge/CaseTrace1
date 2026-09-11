@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { Tooltip } from './Tooltip';
-import { getRoleLabel } from '../../lib/roles';
+import { getRoleLabel, getRoleHindiLabel } from '../../lib/roles';
 import {
   LayoutDashboard,
   FolderLock,
@@ -33,6 +33,7 @@ export const Sidebar: React.FC = () => {
       roles: [
         'Senior Officer',
         'Investigating Officer',
+        'Cyber Crime Investigating Officer',
         'Forensic Officer',
         'Prosecutor',
         'Court User',
@@ -47,6 +48,7 @@ export const Sidebar: React.FC = () => {
       roles: [
         'Senior Officer',
         'Investigating Officer',
+        'Cyber Crime Investigating Officer',
         'Forensic Officer',
         'Prosecutor',
         'Court User',
@@ -100,7 +102,7 @@ export const Sidebar: React.FC = () => {
           <button
             onClick={() => setCollapsed(!collapsed)}
             aria-label="Toggle Sidebar Navigation"
-            className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-navy-850 transition-colors"
+            className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-navy-855 transition-colors"
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -112,9 +114,16 @@ export const Sidebar: React.FC = () => {
             <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
               Active Clearance
             </div>
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-              <span className="text-xs font-bold text-slate-900 dark:text-white tracking-wide font-mono uppercase truncate">{getRoleLabel(currentUser.role)}</span>
+            <div className="flex items-start gap-2">
+              <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-white tracking-wide truncate">
+                  {getRoleLabel(currentUser.role)}
+                </div>
+                <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium truncate">
+                  {getRoleHindiLabel(currentUser.role)}
+                </div>
+              </div>
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">{currentUser.department}</div>
           </div>
@@ -159,19 +168,8 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Footer Status info */}
-      {!collapsed && (
-        <div className="border-t border-slate-200 dark:border-navy-800 pt-3 text-[11px] font-mono text-slate-500 dark:text-slate-400 space-y-1 w-full">
-          <div className="flex justify-between items-center">
-            <span>NETWORK:</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-bold">ONLINE</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span>ENGINE:</span>
-            <span className="text-slate-700 dark:text-slate-300 font-semibold">RBAC v2.0</span>
-          </div>
-        </div>
-      )}
+      <div className="pt-2" />
     </aside>
   );
 };
+

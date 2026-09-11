@@ -148,6 +148,28 @@ export default function CasePassportDetailPage() {
     { id: 'security', label: 'Security & Audit View', hint: 'Immutable access log and risk scoring', icon: ShieldAlert },
   ];
 
+  // Silent RBAC tab visibility: show only tabs cleared for current user role
+  const roleAllowedTabs: Record<string, string[]> = {
+    'Senior Officer': ['overview', 'documents', 'evidence', 'people', 'timeline', 'integrity', 'security'],
+    'Investigating Officer': ['overview', 'documents', 'evidence', 'people', 'timeline'],
+    'Cyber Crime Investigating Officer': ['overview', 'documents', 'evidence', 'people', 'timeline', 'integrity'],
+    'Forensic Officer': ['overview', 'documents', 'evidence', 'timeline', 'integrity'],
+    'Prosecutor': ['overview', 'documents', 'people', 'timeline'],
+    'Court User': ['overview', 'documents', 'timeline'],
+    'Auditor / Security': ['overview', 'timeline', 'integrity', 'security'],
+    'Admin': ['overview', 'documents', 'evidence', 'people', 'timeline', 'integrity', 'security'],
+  };
+
+  const allowedTabIds = roleAllowedTabs[currentUser.role] || ['overview', 'documents'];
+  const visibleTabs = tabs.filter((t) => allowedTabIds.includes(t.id));
+
+  // If currently selected tab is not authorized for active role, fall back to first visible tab
+  useEffect(() => {
+    if (!allowedTabIds.includes(activeTab)) {
+      setActiveTab((visibleTabs[0]?.id as any) || 'overview');
+    }
+  }, [currentUser.role, allowedTabIds, activeTab, visibleTabs]);
+
   return (
     <div className="space-y-6">
       {/* Case Passport Flagship Header */}
@@ -156,9 +178,9 @@ export default function CasePassportDetailPage() {
         onCaseUpdated={(updated) => setCaseData(updated)}
       />
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs (Silently filtered by RBAC) */}
       <div className="border-b border-slate-200 dark:border-slate-800 flex flex-wrap gap-2 font-mono text-xs overflow-x-auto">
-        {tabs.map((t) => {
+        {visibleTabs.map((t) => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
 
@@ -180,6 +202,7 @@ export default function CasePassportDetailPage() {
           );
         })}
       </div>
+
 
       {/* Active Tab Content */}
       <div className="pt-2">

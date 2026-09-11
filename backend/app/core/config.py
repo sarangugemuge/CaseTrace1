@@ -22,17 +22,21 @@ class Settings(BaseSettings):
     # Mode selection: 'real' or 'mock'
     API_MODE: str = os.getenv("API_MODE", "real")
 
-    # MinIO / S3-Compatible Object Storage Configuration (Phase 6)
+    # MinIO / S3-Compatible Object Storage Configuration
     STORAGE_ENDPOINT: str = os.getenv("STORAGE_ENDPOINT", "http://localhost:9000")
     STORAGE_ACCESS_KEY: str = os.getenv("STORAGE_ACCESS_KEY", "minioadmin")
     STORAGE_SECRET_KEY: str = os.getenv("STORAGE_SECRET_KEY", "minioadmin")
-    STORAGE_BUCKET: str = os.getenv("STORAGE_BUCKET", "casetrace-documents")
+    STORAGE_BUCKET: str = os.getenv("STORAGE_BUCKET", "casetrace")
     STORAGE_REGION: str = os.getenv("STORAGE_REGION", "us-east-1")
     STORAGE_SECURE: bool = os.getenv("STORAGE_SECURE", "false").lower() == "true"
 
     JWT_SECRET: str = os.getenv("JWT_SECRET", "casetrace_secure_jwt_secret_key_2026_demo")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10"))
+    INACTIVITY_TIMEOUT_MINUTES: int = int(os.getenv("INACTIVITY_TIMEOUT_MINUTES", "15"))
+    REFRESH_TOKEN_EXPIRE_HOURS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_HOURS", "8"))
+    SENSITIVE_OP_MAX_AGE_MINUTES: int = int(os.getenv("SENSITIVE_OP_MAX_AGE_MINUTES", "15"))
+    TOTP_ISSUER_NAME: str = os.getenv("TOTP_ISSUER_NAME", "CaseTrace India")
     
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 

@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
-import { SecurityBanner } from './SecurityBanner';
 import { Shield } from 'lucide-react';
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -62,7 +61,6 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   // Authenticated user on protected dashboard route
   return (
     <>
-      <SecurityBanner />
       <Navbar />
       <div className="flex flex-1">
         <Sidebar />
@@ -73,3 +71,4 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
     </>
   );
 };
+

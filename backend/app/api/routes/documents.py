@@ -3,7 +3,14 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from backend.app.db.database import get_db
 from backend.app.db.models.user import UserModel
-from backend.app.schemas.document import DocumentResponse, DocumentVerificationResult, DocumentMetadataUpdate
+from backend.app.schemas.document import (
+    DocumentResponse,
+    DocumentVerificationResult,
+    DocumentMetadataUpdate,
+    DocumentApprovalRequest,
+    DocumentApprovalResponse,
+    ChainOfCustodyEntrySchema
+)
 from backend.app.dependencies.auth import get_current_user
 from backend.app.services.document_service import DocumentService
 
@@ -237,3 +244,39 @@ def delete_case_document(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=res["reason"])
 
     return {"status": "success", "message": res["reason"]}
+
+@router.post("/documents/{document_id}/review", response_model=DocumentApprovalResponse)
+def review_case_document(
+    document_id: str,
+    review_in: DocumentApprovalRequest,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Senior authority evidence review and verification endpoint.
+    Restricted to Senior Investigating Officer or System Administrator.
+    Enforces strict separation of duties (uploader cannot approve own evidence).
+    """
+    service = DocumentService(db)
+    result = service.review_document(
+        document_id=document_id,
+        decision=review_in.decision,
+        user=current_user,
+        justification=review_in.justification,
+        rejection_reason=review_in.rejection_reason
+    )
+    return DocumentApprovalResponse(**result)
+
+@router.get("/documents/{document_id}/custody", response_model=List[ChainOfCustodyEntrySchema])
+def get_document_chain_of_custody(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Retrieve the immutable append-only chronological chain of custody for an evidence document.
+    """
+    service = DocumentService(db)
+    custody = service.get_document_custody(document_id, current_user)
+    return [ChainOfCustodyEntrySchema(**c) for c in custody]
+

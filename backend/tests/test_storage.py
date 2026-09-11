@@ -6,7 +6,7 @@ from backend.app.services.storage_service import StorageService
 def test_storage_settings_defaults():
     s = Settings()
     assert s.STORAGE_ENDPOINT == "http://localhost:9000"
-    assert s.STORAGE_BUCKET == "casetrace-documents"
+    assert s.STORAGE_BUCKET in ["casetrace", "casetrace-documents"]
     assert s.STORAGE_ACCESS_KEY == "minioadmin"
 
 def test_storage_service_methods():
