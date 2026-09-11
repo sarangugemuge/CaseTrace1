@@ -36,7 +36,6 @@ class Settings(BaseSettings):
     INACTIVITY_TIMEOUT_MINUTES: int = int(os.getenv("INACTIVITY_TIMEOUT_MINUTES", "15"))
     REFRESH_TOKEN_EXPIRE_HOURS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_HOURS", "8"))
     SENSITIVE_OP_MAX_AGE_MINUTES: int = int(os.getenv("SENSITIVE_OP_MAX_AGE_MINUTES", "15"))
-    TOTP_ISSUER_NAME: str = os.getenv("TOTP_ISSUER_NAME", "CaseTrace India")
     
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 

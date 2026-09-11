@@ -147,7 +147,7 @@ def require_roles(allowed_roles: List[str]):
 def require_recent_auth(max_age_minutes: Optional[int] = None):
     """
     Dependency that enforces reauthentication for highly sensitive operations
-    if the user's last password or 2FA verification was more than max_age_minutes ago.
+    if the user's last password verification was more than max_age_minutes ago.
     """
     def recent_auth_checker(current_user: UserModel = Depends(get_current_user)):
         limit = max_age_minutes or settings.SENSITIVE_OP_MAX_AGE_MINUTES

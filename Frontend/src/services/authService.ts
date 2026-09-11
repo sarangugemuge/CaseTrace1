@@ -4,7 +4,6 @@ import { MOCK_USERS } from '../mock/users';
 const USER_STORAGE_KEY = 'casetrace_current_user';
 const ACCESS_TOKEN_KEY = 'casetrace_access_token';
 const REFRESH_TOKEN_KEY = 'casetrace_refresh_token';
-const TEMP_2FA_KEY = 'casetrace_temp_2fa_token';
 const LAST_ACTIVE_KEY = 'casetrace_last_active_timestamp';
 const TOKEN_EXPIRY_KEY = 'casetrace_token_expires_at';
 
@@ -24,10 +23,7 @@ export const authService = {
           (u) => u.id === parsed.id || u.email === parsed.email || u.role === parsed.role
         );
         if (found) {
-          return {
-            ...found,
-            isTotpEnabled: parsed.isTotpEnabled ?? found.isTotpEnabled ?? false,
-          };
+          return found;
         }
         if (parsed && parsed.role) return parsed;
       } catch (e) {
@@ -49,21 +45,6 @@ export const authService = {
 
   getToken(): string | null {
     return this.getAccessToken();
-  },
-
-  getTemp2faToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return sessionStorage.getItem(TEMP_2FA_KEY);
-  },
-
-  setTemp2faToken(token: string): void {
-    if (typeof window === 'undefined') return;
-    sessionStorage.setItem(TEMP_2FA_KEY, token);
-  },
-
-  clearTemp2faToken(): void {
-    if (typeof window === 'undefined') return;
-    sessionStorage.removeItem(TEMP_2FA_KEY);
   },
 
   updateLastActive(): void {
@@ -157,7 +138,6 @@ export const authService = {
     sessionStorage.removeItem(USER_STORAGE_KEY);
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-    sessionStorage.removeItem(TEMP_2FA_KEY);
     sessionStorage.removeItem(LAST_ACTIVE_KEY);
     sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
 

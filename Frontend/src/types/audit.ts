@@ -15,10 +15,7 @@ export type AuditEventType =
   | 'DOCUMENT_VERSION_CREATED'
   | 'INTEGRITY_VERIFICATION'
   | 'CASE_ASSIGNMENT_CHANGED'
-  | 'SECURITY_ALERT'
-  | '2FA_VERIFIED'
-  | '2FA_ENABLED'
-  | '2FA_DISABLED';
+  | 'SECURITY_ALERT';
 
 export type AccessPurpose =
   | 'INVESTIGATION'

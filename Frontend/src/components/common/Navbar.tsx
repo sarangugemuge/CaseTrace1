@@ -29,13 +29,11 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { NotificationItem } from '../../types/notification';
-import { SecuritySettingsModal } from '../security/SecuritySettingsModal';
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
   const { currentUser, switchRole, logout, sessionWarning, extendSession } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [securityModalOpen, setSecurityModalOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -583,43 +581,15 @@ export const Navbar: React.FC = () => {
                     aria-label="Select institutional role clearance"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-navy-950 border border-slate-300 dark:border-navy-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer"
                   >
-                    <option value="Senior Officer">वरिष्ठ अन्वेषण अधिकारी (Senior Investigating Officer)</option>
-                    <option value="Investigating Officer">अन्वेषण अधिकारी (Investigating Officer)</option>
-                    <option value="Cyber Crime Investigating Officer">साइबर अपराध अन्वेषण अधिकारी (Cyber Crime Investigating Officer)</option>
-                    <option value="Forensic Officer">डिजिटल फोरेंसिक अधिकारी (Digital Forensics Officer)</option>
-                    <option value="Prosecutor">सरकारी अभियोजक (Public Prosecutor)</option>
-                    <option value="Court User">न्यायिक अधिकारी (Judicial Officer)</option>
-                    <option value="Auditor / Security">सुरक्षा एवं लेखा-परीक्षण अधिकारी (Security & Audit Officer)</option>
-                    <option value="Admin">प्रणाली प्रशासक (System Administrator)</option>
+                    <option value="Senior Officer">Senior Investigating Officer</option>
+                    <option value="Investigating Officer">Investigating Officer</option>
+                    <option value="Cyber Crime Investigating Officer">Cyber Crime Investigating Officer</option>
+                    <option value="Forensic Officer">Digital Forensics Officer</option>
+                    <option value="Prosecutor">Public Prosecutor</option>
+                    <option value="Court User">Judicial Officer</option>
+                    <option value="Auditor / Security">Security & Audit Officer</option>
+                    <option value="Admin">System Administrator</option>
                   </select>
-                </div>
-
-                {/* 2FA Status & Security Settings */}
-                <div className="border-t border-slate-200 dark:border-navy-800 pt-2 space-y-1.5">
-                  <div className="flex items-center justify-between px-2 py-1 text-xs font-mono">
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px]">Two-Factor Auth:</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                      currentUser.isTotpEnabled
-                        ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                        : 'bg-slate-100 dark:bg-navy-950 text-slate-500 border border-slate-200 dark:border-navy-800'
-                    }`}>
-                      {currentUser.isTotpEnabled ? 'Active (TOTP)' : 'Disabled'}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      setSecurityModalOpen(true);
-                    }}
-                    className="w-full text-left px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg flex items-center justify-between font-mono transition-colors cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                      Security & 2FA Settings
-                    </span>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
                 </div>
 
                 {/* Sign Out Button */}
@@ -643,11 +613,6 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
     </header>
-
-    <SecuritySettingsModal
-      isOpen={securityModalOpen}
-      onClose={() => setSecurityModalOpen(false)}
-    />
   </>
 );
 };

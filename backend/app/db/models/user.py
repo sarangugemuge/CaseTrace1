@@ -16,12 +16,6 @@ class UserModel(Base):
     assigned_case_ids = Column(JSON, nullable=True, default=list)
     status = Column(String, default="ACTIVE")
     
-    # Two-Factor Authentication (TOTP & Recovery Codes)
-    totp_secret = Column(String, nullable=True)
-    totp_pending_secret = Column(String, nullable=True)
-    is_totp_enabled = Column(Boolean, default=False, nullable=False)
-    recovery_codes = Column(JSON, nullable=True, default=list)
-    
     # Session & Security Tracking
     last_authenticated_at = Column(DateTime, nullable=True, default=lambda: datetime.now(timezone.utc))
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

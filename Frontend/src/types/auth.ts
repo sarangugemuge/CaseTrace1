@@ -32,7 +32,6 @@ export interface User {
   avatar: string;
   assignedCaseIds: string[];
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-  isTotpEnabled?: boolean;
 }
 
 export interface Session {
@@ -42,8 +41,6 @@ export interface Session {
 }
 
 export interface LoginResult {
-  requires2fa?: boolean;
-  tempToken?: string;
   user?: User;
   accessToken?: string;
   refreshToken?: string;
@@ -51,18 +48,10 @@ export interface LoginResult {
   message?: string;
 }
 
-export interface TotpSetupData {
-  secret: string;
-  qrCode: string;
-  manualEntryKey: string;
-  issuer: string;
-}
-
 export interface SessionStatus {
   active: boolean;
   userId: string;
   role: Role;
-  isTotpEnabled: boolean;
   lastAuthenticatedAt?: string;
   inactivityTimeoutSeconds: number;
   maxSessionLifetimeSeconds: number;

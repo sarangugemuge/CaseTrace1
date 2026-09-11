@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { User, Role, LoginResult, TotpSetupData } from "../types/auth";
+import { createContext, useContext, useState, useEffect } from "react";
+import type { User, Role, LoginResult } from "../types/auth";
 import { authService } from "../services/authService";
 import { auditService } from "../services/auditService";
 import { apiClient } from "../lib/apiClient";
@@ -11,17 +11,10 @@ interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  is2faPending: boolean;
-  temp2faToken: string | null;
   sessionWarning: boolean;
   login: (identifier: string, role?: Role, password?: string) => Promise<LoginResult>;
-  verify2fa: (code: string, isRecoveryCode?: boolean) => Promise<User>;
-  cancel2fa: () => void;
   logout: () => Promise<void>;
   switchRole: (role: Role) => void;
-  setup2fa: () => Promise<TotpSetupData>;
-  enable2fa: (code: string) => Promise<{ success: boolean; recoveryCodes: string[] }>;
-  disable2fa: (password?: string, code?: string) => Promise<{ success: boolean }>;
   extendSession: () => Promise<void>;
 }
 
@@ -33,8 +26,6 @@ export const AuthProvider = ({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [is2faPending, setIs2faPending] = useState<boolean>(false);
-  const [temp2faToken, setTemp2faToken] = useState<string | null>(null);
   const [sessionWarning, setSessionWarning] = useState<boolean>(false);
 
   // Sync state on client mount
@@ -53,7 +44,7 @@ export const AuthProvider = ({
     setIsLoading(false);
   }, []);
 
-  // Inactivity tracking & best-effort cleanup
+  // Inactivity tracking & session lifecycle
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -114,17 +105,10 @@ export const AuthProvider = ({
   ): Promise<LoginResult> => {
     try {
       const result = await apiClient.login(identifier, role, password);
-      if (result.requires2fa && result.tempToken) {
-        setIs2faPending(true);
-        setTemp2faToken(result.tempToken);
-        return result;
-      }
 
       if (result.user) {
         setCurrentUser(result.user);
         setIsAuthenticated(true);
-        setIs2faPending(false);
-        setTemp2faToken(null);
         auditService.logEvent(result.user, "LOGIN", {
           result: "SUCCESS",
           riskLevel: "LOW",
@@ -140,39 +124,13 @@ export const AuthProvider = ({
       const user = authService.login(identifier, role);
       setCurrentUser(user);
       setIsAuthenticated(true);
-      setIs2faPending(false);
-      setTemp2faToken(null);
       auditService.logEvent(user, "LOGIN", {
         result: "SUCCESS",
         riskLevel: "LOW",
         description: `User ${user.name} logged into CASETRACE with role ${user.role}.`,
       });
-      return { user, requires2fa: false };
+      return { user };
     }
-  };
-
-  const handleVerify2fa = async (code: string, isRecoveryCode: boolean = false): Promise<User> => {
-    if (!temp2faToken) {
-      throw new Error("No pending two-factor verification session.");
-    }
-    const user = await apiClient.verify2fa(temp2faToken, code, isRecoveryCode);
-    setCurrentUser(user);
-    setIsAuthenticated(true);
-    setIs2faPending(false);
-    setTemp2faToken(null);
-
-    auditService.logEvent(user, "2FA_VERIFIED", {
-      result: "SUCCESS",
-      riskLevel: "LOW",
-      description: `Two-factor authentication verified for ${user.name} (${isRecoveryCode ? "Backup Code" : "TOTP"}).`,
-    });
-    return user;
-  };
-
-  const cancel2fa = () => {
-    setIs2faPending(false);
-    setTemp2faToken(null);
-    authService.clearTemp2faToken();
   };
 
   const handleLogout = async () => {
@@ -186,8 +144,6 @@ export const AuthProvider = ({
     await apiClient.logout();
     setCurrentUser(null);
     setIsAuthenticated(false);
-    setIs2faPending(false);
-    setTemp2faToken(null);
     setSessionWarning(false);
   };
 
@@ -208,43 +164,16 @@ export const AuthProvider = ({
     await apiClient.refreshToken();
   };
 
-  const setup2fa = async (): Promise<TotpSetupData> => {
-    return await apiClient.setup2fa();
-  };
-
-  const enable2fa = async (code: string): Promise<{ success: boolean; recoveryCodes: string[] }> => {
-    const result = await apiClient.enable2fa(code);
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, isTotpEnabled: true });
-    }
-    return result;
-  };
-
-  const disable2fa = async (password?: string, code?: string): Promise<{ success: boolean }> => {
-    const result = await apiClient.disable2fa(password, code);
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, isTotpEnabled: false });
-    }
-    return result;
-  };
-
   return (
     <AuthContext.Provider
       value={{
         currentUser,
         isAuthenticated,
         isLoading,
-        is2faPending,
-        temp2faToken,
         sessionWarning,
         login: handleLogin,
-        verify2fa: handleVerify2fa,
-        cancel2fa,
         logout: handleLogout,
         switchRole: handleSwitchRole,
-        setup2fa,
-        enable2fa,
-        disable2fa,
         extendSession,
       }}
     >

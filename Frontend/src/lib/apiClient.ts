@@ -1,4 +1,4 @@
-import { User, Role, LoginResult, TotpSetupData, SessionStatus } from '../types/auth';
+import { User, Role, LoginResult, SessionStatus } from '../types/auth';
 import { CasePassport } from '../types/case';
 import { Document } from '../types/document';
 import { AuditEntry, AuditSummary } from '../types/audit';
@@ -205,7 +205,7 @@ export const apiClient = {
   async login(email: string, role?: Role, password: string = 'password123'): Promise<LoginResult> {
     if (API_MODE === 'mock') {
       const user = authService.login(email, role);
-      return { user, requires2fa: false, accessToken: 'mock-token' };
+      return { user, accessToken: 'mock-token' };
     }
     try {
       const controller = new AbortController();
@@ -219,14 +219,6 @@ export const apiClient = {
       clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
-        if (data.requires_2fa) {
-          authService.setTemp2faToken(data.temp_token);
-          return {
-            requires2fa: true,
-            tempToken: data.temp_token,
-            message: data.message,
-          };
-        }
         authService.saveSession(
           data.user,
           data.access_token,
@@ -238,7 +230,6 @@ export const apiClient = {
           user: mappedUser,
           accessToken: data.access_token,
           refreshToken: data.refresh_token,
-          requires2fa: false,
         };
       }
       const errData = await res.json().catch(() => ({}));
@@ -248,114 +239,8 @@ export const apiClient = {
         throw err;
       }
       const user = authService.login(email, role);
-      return { user, requires2fa: false, accessToken: 'mock-token' };
+      return { user, accessToken: 'mock-token' };
     }
-  },
-
-  async verify2fa(tempToken: string, code: string, isRecoveryCode: boolean = false): Promise<User> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        temp_token: tempToken,
-        code,
-        is_recovery_code: isRecoveryCode,
-      }),
-    });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || 'Failed to verify two-factor authentication code.');
-    }
-    const data = await res.json();
-    authService.saveSession(
-      data.user,
-      data.access_token,
-      data.refresh_token,
-      data.expires_in || 600
-    );
-    authService.clearTemp2faToken();
-    return authService.getCurrentUser() || data.user;
-  },
-
-  async setup2fa(): Promise<TotpSetupData> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/setup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authService.getAccessToken()}`,
-      },
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to initialize 2FA setup.');
-    }
-    const data = await res.json();
-    return {
-      secret: data.secret,
-      qrCode: data.qr_code,
-      manualEntryKey: data.manual_entry_key,
-      issuer: data.issuer,
-    };
-  },
-
-  async enable2fa(code: string): Promise<{ success: boolean; recoveryCodes: string[] }> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/enable`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authService.getAccessToken()}`,
-      },
-      body: JSON.stringify({ code }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to activate 2FA.');
-    }
-    const data = await res.json();
-    const cur = authService.getCurrentUser();
-    if (cur) {
-      authService.saveSession({ ...cur, isTotpEnabled: true }, authService.getAccessToken() || '', authService.getRefreshToken() || '');
-    }
-    return {
-      success: data.success,
-      recoveryCodes: data.recovery_codes,
-    };
-  },
-
-  async disable2fa(password?: string, code?: string): Promise<{ success: boolean }> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/disable`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authService.getAccessToken()}`,
-      },
-      body: JSON.stringify({ password, code }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to disable 2FA.');
-    }
-    const cur = authService.getCurrentUser();
-    if (cur) {
-      authService.saveSession({ ...cur, isTotpEnabled: false }, authService.getAccessToken() || '', authService.getRefreshToken() || '');
-    }
-    return { success: true };
-  },
-
-  async regenerateRecoveryCodes(): Promise<{ recoveryCodes: string[] }> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/2fa/recovery-codes/regenerate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authService.getAccessToken()}`,
-      },
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to regenerate recovery codes.');
-    }
-    const data = await res.json();
-    return { recoveryCodes: data.recovery_codes };
   },
 
   async refreshToken(): Promise<{ accessToken: string; refreshToken: string } | null> {
@@ -396,14 +281,14 @@ export const apiClient = {
     authService.clearSession();
   },
 
-  async reauthenticate(password?: string, code?: string): Promise<{ success: boolean }> {
+  async reauthenticate(password?: string): Promise<{ success: boolean }> {
     const res = await fetch(`${API_BASE_URL}/api/auth/reauthenticate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authService.getAccessToken()}`,
       },
-      body: JSON.stringify({ password, code }),
+      body: JSON.stringify({ password }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -420,7 +305,6 @@ export const apiClient = {
         active: true,
         userId: authService.getCurrentUser()?.id || 'usr-001',
         role: authService.getCurrentUser()?.role || 'Senior Officer',
-        isTotpEnabled: false,
         inactivityTimeoutSeconds: 900,
         maxSessionLifetimeSeconds: 28800,
       })

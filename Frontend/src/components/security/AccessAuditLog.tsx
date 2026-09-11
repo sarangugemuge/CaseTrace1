@@ -94,15 +94,15 @@ export const AccessAuditLog: React.FC<{ filterCaseId?: string }> = ({ filterCase
             onChange={(e) => setRoleFilter(e.target.value)}
             className="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
           >
-            <option value="ALL">All Roles / सभी भूमिकाएँ</option>
-            <option value="Senior Officer">वरिष्ठ अन्वेषण अधिकारी (Senior Investigating Officer)</option>
-            <option value="Investigating Officer">अन्वेषण अधिकारी (Investigating Officer)</option>
-            <option value="Cyber Crime Investigating Officer">साइबर अपराध अन्वेषण अधिकारी (Cyber Crime Investigating Officer)</option>
-            <option value="Forensic Officer">डिजिटल फोरेंसिक अधिकारी (Digital Forensics Officer)</option>
-            <option value="Prosecutor">सरकारी अभियोजक (Public Prosecutor)</option>
-            <option value="Court User">न्यायिक अधिकारी (Judicial Officer)</option>
-            <option value="Auditor / Security">सुरक्षा एवं लेखा-परीक्षण अधिकारी (Security & Audit Officer)</option>
-            <option value="Admin">प्रणाली प्रशासक (System Administrator)</option>
+            <option value="ALL">All Roles</option>
+            <option value="Senior Officer">Senior Investigating Officer</option>
+            <option value="Investigating Officer">Investigating Officer</option>
+            <option value="Cyber Crime Investigating Officer">Cyber Crime Investigating Officer</option>
+            <option value="Forensic Officer">Digital Forensics Officer</option>
+            <option value="Prosecutor">Public Prosecutor</option>
+            <option value="Court User">Judicial Officer</option>
+            <option value="Auditor / Security">Security & Audit Officer</option>
+            <option value="Admin">System Administrator</option>
           </select>
         </div>
       </div>

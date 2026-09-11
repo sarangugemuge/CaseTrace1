@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { Tooltip } from './Tooltip';
-import { getRoleLabel, getRoleHindiLabel } from '../../lib/roles';
+import { getRoleLabel } from '../../lib/roles';
 import {
   LayoutDashboard,
   FolderLock,
@@ -119,9 +119,6 @@ export const Sidebar: React.FC = () => {
               <div className="min-w-0">
                 <div className="text-xs font-bold text-slate-900 dark:text-white tracking-wide truncate">
                   {getRoleLabel(currentUser.role)}
-                </div>
-                <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium truncate">
-                  {getRoleHindiLabel(currentUser.role)}
                 </div>
               </div>
             </div>

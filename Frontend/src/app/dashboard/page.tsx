@@ -8,7 +8,7 @@ import { caseService } from '../../services/caseService';
 import { auditService } from '../../services/auditService';
 import { riskEngine } from '../../services/riskEngine';
 import { accessControlEngine } from '../../services/accessControlEngine';
-import { getRoleLabel, getRoleHindiLabel } from '../../lib/roles';
+import { getRoleLabel } from '../../lib/roles';
 import { CasePassport } from '../../types/case';
 import { DashboardStats } from '../../types/security';
 import { SensitivityBadge } from '../../components/common/Badge';
@@ -106,7 +106,6 @@ export default function DashboardPage() {
             <span className="font-semibold text-slate-800 dark:text-slate-200">{currentUser.name}</span>
             <span>•</span>
             <span className="text-blue-600 dark:text-blue-400 font-bold uppercase">{displayRole}</span>
-            <span className="text-slate-500 dark:text-slate-400 font-sans">({getRoleHindiLabel(currentUser.role)})</span>
             <span>•</span>
             <span>{currentUser.department}</span>
           </div>
@@ -222,7 +221,6 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-xs font-bold text-purple-700 dark:text-purple-300 mt-2 truncate uppercase">{displayRole}</div>
-            <div className="text-[11px] text-blue-600 dark:text-blue-400 font-sans mt-0.5 truncate font-medium">{getRoleHindiLabel(currentUser.role)}</div>
           </div>
 
         </div>

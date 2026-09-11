@@ -16,13 +16,13 @@ export interface RolePermissionSummary {
 export const ROLE_PERMISSIONS: Record<Role, RolePermissionSummary> = {
   'Senior Officer': {
     role: 'Senior Officer',
-    displayLabel: 'वरिष्ठ अन्वेषण अधिकारी (Senior Investigating Officer)',
+    displayLabel: 'Senior Investigating Officer',
     personaName: 'Shri R. K. Verma',
     designation: 'Senior Investigating Officer',
     department: 'Central Investigation Bureau',
     clearanceLevel: 'TOP SECRET // EXECUTIVE CLEARANCE',
     badgeColor: 'border-purple-500/50 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300',
-    description: 'वरिष्ठ अन्वेषण अधिकारी • Senior supervisory officer with cross-jurisdictional case oversight, incident initialization, and audit review.',
+    description: 'Senior supervisory officer with cross-jurisdictional case oversight, incident initialization, and audit review.',
     can: [
       'View all cases across departments (cross-department oversight)',
       'Create and anchor new Digital Case Passports / Incidents',
@@ -39,13 +39,13 @@ export const ROLE_PERMISSIONS: Record<Role, RolePermissionSummary> = {
   },
   'Investigating Officer': {
     role: 'Investigating Officer',
-    displayLabel: 'अन्वेषण अधिकारी (Investigating Officer)',
+    displayLabel: 'Investigating Officer',
     personaName: 'Insp. Rajesh Kumar',
     designation: 'Investigating Officer',
     department: 'Crime Branch Investigation',
     clearanceLevel: 'CONFIDENTIAL // LEAD INVESTIGATOR',
     badgeColor: 'border-blue-500/50 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
-    description: 'अन्वेषण अधिकारी • Primary investigative officer handling assigned incident inquiry, evidence acquisition, and case filing.',
+    description: 'Primary investigative officer handling assigned incident inquiry, evidence acquisition, and case filing.',
     can: [
       'Add new incident reports and initialize Digital Case Passports',
       'View and manage assigned case files (e.g. CASE-2026-8942)',
@@ -63,13 +63,13 @@ export const ROLE_PERMISSIONS: Record<Role, RolePermissionSummary> = {
   },
   'Cyber Crime Investigating Officer': {
     role: 'Cyber Crime Investigating Officer',
-    displayLabel: 'साइबर अपराध अन्वेषण अधिकारी (Cyber Crime Investigating Officer)',
+    displayLabel: 'Cyber Crime Investigating Officer',
     personaName: 'Insp. Vikram Malhotra',
     designation: 'Cyber Crime Investigating Officer',
     department: 'Cyber Crime Investigation Cell',
     clearanceLevel: 'CONFIDENTIAL // CYBER INVESTIGATOR',
     badgeColor: 'border-indigo-500/50 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
-    description: 'साइबर अपराध अन्वेषण अधिकारी • Cyber crime investigator handling network forensics, digital evidence, and electronic incident reports.',
+    description: 'Cyber crime investigator handling network forensics, digital evidence, and electronic incident reports.',
     can: [
       'Record cyber incidents and initialize Digital Case Passports',
       'View and manage assigned cyber crime cases',
@@ -85,13 +85,13 @@ export const ROLE_PERMISSIONS: Record<Role, RolePermissionSummary> = {
   },
   'Forensic Officer': {
     role: 'Forensic Officer',
-    displayLabel: 'डिजिटल फोरेंसिक अधिकारी (Digital Forensics Officer)',
+    displayLabel: 'Digital Forensics Officer',
     personaName: 'Dr. Ananya Roy',
     designation: 'Digital Forensics Officer',
     department: 'Central Digital Forensic Science Laboratory',
     clearanceLevel: 'SPECIAL ACCESS // FORENSIC SCIENCE',
     badgeColor: 'border-cyan-500/50 bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300',
-    description: 'डिजिटल फोरेंसिक अधिकारी • Forensic specialist conducting bitstream acquisitions, memory forensics, and hash verification.',
+    description: 'Forensic specialist conducting bitstream acquisitions, memory forensics, and hash verification.',
     can: [
       'Conduct authoritative server-side SHA-256 integrity verification',
       'Upload and register forensic disk images, memory captures, and artifacts',
@@ -108,13 +108,13 @@ export const ROLE_PERMISSIONS: Record<Role, RolePermissionSummary> = {
   },
   'Prosecutor': {
     role: 'Prosecutor',
-    displayLabel: 'सरकारी अभियोजक (Public Prosecutor)',
+    displayLabel: 'Public Prosecutor',
     personaName: 'Adv. Suresh Narang',
     designation: 'Public Prosecutor',
     department: 'Directorate of Public Prosecutions',
     clearanceLevel: 'LEGAL PRIVILEGE // COURTROOM PROSECUTION',
     badgeColor: 'border-amber-500/50 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
-    description: 'सरकारी अभियोजक • Legal prosecutor examining evidentiary admissibility, chain of custody compliance, and trial filing exhibits.',
+    description: 'Legal prosecutor examining evidentiary admissibility, chain of custody compliance, and trial filing exhibits.',
     can: [
       'View assigned trial briefs, charge sheets, and evidence exhibits',
       'Inspect Chain of Custody trails for courtroom evidentiary admissibility',
@@ -130,13 +130,13 @@ export const ROLE_PERMISSIONS: Record<Role, RolePermissionSummary> = {
   },
   'Court User': {
     role: 'Court User',
-    displayLabel: 'न्यायिक अधिकारी (Judicial Officer)',
+    displayLabel: 'Judicial Officer',
     personaName: 'Smt. Geeta Sharma',
     designation: 'Judicial Officer',
     department: 'Principal District & Sessions Court',
     clearanceLevel: 'PUBLIC REGISTRY // JUDICIAL OFFICER',
     badgeColor: 'border-emerald-500/50 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-    description: 'न्यायिक अधिकारी • Judicial officer reviewing public court filings, official exhibits, and verifying submitted digital evidence records.',
+    description: 'Judicial officer reviewing public court filings, official exhibits, and verifying submitted digital evidence records.',
     can: [
       'View judicial docket entries for assigned case passports',
       'Access PUBLIC sensitivity filings and submitted court exhibits',
@@ -152,13 +152,13 @@ export const ROLE_PERMISSIONS: Record<Role, RolePermissionSummary> = {
   },
   'Auditor / Security': {
     role: 'Auditor / Security',
-    displayLabel: 'सुरक्षा एवं लेखा-परीक्षण अधिकारी (Security & Audit Officer)',
+    displayLabel: 'Security & Audit Officer',
     personaName: 'Shri Alok Deshmukh',
     designation: 'Security & Audit Officer',
     department: 'Internal Oversight & Vigilance',
     clearanceLevel: 'FULL COMPLIANCE // AUDIT OVERSIGHT',
     badgeColor: 'border-rose-500/50 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
-    description: 'सुरक्षा एवं लेखा-परीक्षण अधिकारी • Independent oversight officer monitoring access governance, policy compliance, and audit logs.',
+    description: 'Independent oversight officer monitoring access governance, policy compliance, and audit logs.',
     can: [
       'Perform cross-department compliance oversight across all cases',
       'Access global immutable audit stream & security violation alerts',
@@ -174,13 +174,13 @@ export const ROLE_PERMISSIONS: Record<Role, RolePermissionSummary> = {
   },
   'Admin': {
     role: 'Admin',
-    displayLabel: 'प्रणाली प्रशासक (System Administrator)',
+    displayLabel: 'System Administrator',
     personaName: 'Shri Amit Mehra',
     designation: 'System Administrator',
     department: 'National Informatics Directorate',
     clearanceLevel: 'ROOT GOVERNANCE // SYSTEM ADMIN',
     badgeColor: 'border-red-500/50 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300',
-    description: 'प्रणाली प्रशासक • System administrator responsible for system security policies, role governance, storage configuration, and access controls.',
+    description: 'System administrator responsible for system security policies, role governance, storage configuration, and access controls.',
     can: [
       'Full system governance & policy console access',
       'Manage system roles, permissions, and active statuses',
