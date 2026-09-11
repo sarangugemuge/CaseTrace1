@@ -26,13 +26,58 @@ from backend.app.dependencies.auth import get_current_user
 
 router = APIRouter()
 
-@router.post("/auth/login", response_model=Token)
-def login(login_req: LoginRequest, request: Request, db: Session = Depends(get_db)):
+@router.post(
+    "/auth/login",
+    response_model=Token,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": LoginRequest.model_json_schema()
+                },
+                "application/x-www-form-urlencoded": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "username": {"type": "string"},
+                            "password": {"type": "string"}
+                        },
+                        "required": ["username", "password"]
+                    }
+                }
+            }
+        }
+    }
+)
+async def login(request: Request, db: Session = Depends(get_db)):
+    content_type = request.headers.get("content-type", "")
+    email = None
+    password = None
+
+    if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+        form = await request.form()
+        email = form.get("username") or form.get("email")
+        password = form.get("password")
+    else:
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                email = body.get("email") or body.get("username")
+                password = body.get("password")
+        except Exception:
+            pass
+
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Both username/email and password are required.",
+        )
+
     # 1. Look up user by email, ID, or demo persona name
-    user = db.query(UserModel).filter(UserModel.email == login_req.email).first()
+    user = db.query(UserModel).filter(UserModel.email == email).first()
     if not user:
         user = db.query(UserModel).filter(
-            (UserModel.id == login_req.email) | (UserModel.role == login_req.email)
+            (UserModel.id == email) | (UserModel.role == email)
         ).first()
 
     if not user:
@@ -42,8 +87,8 @@ def login(login_req: LoginRequest, request: Request, db: Session = Depends(get_d
         )
 
     # 2. Verify password (support mock/password123 for dev fixtures)
-    is_valid_pw = verify_password(login_req.password, user.hashed_password)
-    if not is_valid_pw and (user.hashed_password == "mock" and login_req.password == "password123"):
+    is_valid_pw = verify_password(password, user.hashed_password)
+    if not is_valid_pw and (user.hashed_password == "mock" and password == "password123"):
         is_valid_pw = True
 
     if not is_valid_pw:

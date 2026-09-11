@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from typing import List, Optional, Any
 from datetime import datetime
 
@@ -49,17 +49,17 @@ class DocumentBase(BaseModel):
     category: str
     sensitivity: str
     version: int
-    version_history: List[Any] = []
+    version_history: Optional[List[Any]] = []
     uploaded_by: str
     uploader_id: Optional[str] = None
     uploader_role: Optional[str] = None
     uploaded_at: Optional[datetime] = None
     sha256_hash: str
     blockchain_record_id: str
-    allowed_roles: List[str] = []
-    allowed_purposes: List[str] = []
-    integrity_status: str = "VERIFIED"
-    verification_status: str = "PENDING_VERIFICATION"
+    allowed_roles: Optional[List[str]] = []
+    allowed_purposes: Optional[List[str]] = []
+    integrity_status: Optional[str] = "VERIFIED"
+    verification_status: Optional[str] = "PENDING_VERIFICATION"
     verified_by: Optional[str] = None
     verifier_id: Optional[str] = None
     verifier_role: Optional[str] = None
@@ -68,7 +68,7 @@ class DocumentBase(BaseModel):
     rejection_reason: Optional[str] = None
     approved_hash: Optional[str] = None
     approved_version: Optional[int] = None
-    chain_of_custody: List[Any] = []
+    chain_of_custody: Optional[List[Any]] = []
     storage_key: Optional[str] = None
     storage_bucket: Optional[str] = None
     file_size: Optional[int] = 0
@@ -76,6 +76,16 @@ class DocumentBase(BaseModel):
     original_filename: Optional[str] = None
     description: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("verification_status", mode="before")
+    @classmethod
+    def set_verification_status(cls, v):
+        return v or "PENDING_VERIFICATION"
+
+    @field_validator("chain_of_custody", "version_history", "allowed_roles", "allowed_purposes", mode="before")
+    @classmethod
+    def set_list_defaults(cls, v):
+        return v if v is not None else []
 
 class DocumentMetadataUpdate(BaseModel):
     category: Optional[str] = None

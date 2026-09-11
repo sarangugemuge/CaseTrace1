@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status, Header
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, ExpiredSignatureError, jwt
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
@@ -11,13 +11,17 @@ from backend.app.db.models.session import SessionModel
 from backend.app.schemas.user import UserResponse
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+http_bearer = HTTPBearer(auto_error=False)
 
 def get_current_user(
-    token: Optional[str] = Depends(oauth2_scheme),
+    token_oauth: Optional[str] = Depends(oauth2_scheme),
+    auth_creds: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
     x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     db: Session = Depends(get_db),
 ) -> UserModel:
+    token = auth_creds.credentials if (auth_creds and auth_creds.credentials) else token_oauth
+
     # 1. If Bearer token is provided, strictly validate JWT and session state
     if token:
         try:
