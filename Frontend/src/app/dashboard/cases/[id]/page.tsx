@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../../context/AuthContext';
 import { caseService } from '../../../../services/caseService';
-import { apiClient } from '../../../../lib/apiClient';
+import { apiClient } from '@/lib/apiClient';
 import { accessControlEngine } from '../../../../services/accessControlEngine';
 import { Document } from '../../../../types/document';
 import { CasePassport } from '../../../../types/case';

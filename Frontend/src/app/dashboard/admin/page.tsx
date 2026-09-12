@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getRoleLabel } from '../../../lib/roles';
-import { apiClient } from '../../../lib/apiClient';
+import { getRoleLabel } from '@/lib/roles';
+import { apiClient } from '@/lib/apiClient';
 import { RoleRecord, SystemConfig } from '../../../types/admin';
 import { PermissionDeniedState, LoadingState } from '../../../components/common/UXStates';
 import {

@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../context/AuthContext';
-import { apiClient } from '../../../lib/apiClient';
+import { apiClient } from '@/lib/apiClient';
 import { caseService } from '../../../services/caseService';
 import { accessControlEngine } from '../../../services/accessControlEngine';
-import { getRoleLabel } from '../../../lib/roles';
+import { getRoleLabel } from '@/lib/roles';
 import { CasePassport } from '../../../types/case';
 import { SensitivityBadge } from '../../../components/common/Badge';
 import { CreateCaseModal } from '../../../components/passport/CreateCaseModal';

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { MOCK_USERS } from '../../mock/users';
 import { Role } from '../../types/auth';
-import { getRoleLabel } from '../../lib/roles';
+import { getRoleLabel } from '@/lib/roles';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import {
   Shield,

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { getRoleLabel } from '../../../lib/roles';
+import { getRoleLabel } from '@/lib/roles';
 import { AccessAuditLog } from '../../../components/security/AccessAuditLog';
 import { RiskScoreCard } from '../../../components/security/RiskScoreCard';
 import { ShieldAlert, Activity } from 'lucide-react';
