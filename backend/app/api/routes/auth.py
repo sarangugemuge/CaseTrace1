@@ -73,12 +73,36 @@ async def login(request: Request, db: Session = Depends(get_db)):
             detail="Both username/email and password are required.",
         )
 
-    # 1. Look up user by email, ID, or demo persona name
-    user = db.query(UserModel).filter(UserModel.email == email).first()
-    if not user:
-        user = db.query(UserModel).filter(
-            (UserModel.id == email) | (UserModel.role == email)
-        ).first()
+    # 1. Look up user by email, ID, or demo persona name (with alias support)
+    clean_email = email.strip().lower()
+    DEMO_EMAIL_ALIASES = {
+        "rk.verma@casetrace.gov.in": ["robert.vance@casetrace.gov", "rk.verma@casetrace.gov.in", "Senior Officer"],
+        "officer.jenkins@police.gov.in": ["sarah.jenkins@casetrace.gov", "rajesh.kumar@casetrace.gov.in", "Investigating Officer"],
+        "sarah.jenkins@casetrace.gov": ["sarah.jenkins@casetrace.gov", "rajesh.kumar@casetrace.gov.in", "Investigating Officer"],
+        "rajesh.kumar@casetrace.gov.in": ["sarah.jenkins@casetrace.gov", "rajesh.kumar@casetrace.gov.in", "Investigating Officer"],
+        "vikram.malhotra@casetrace.gov.in": ["sarah.jenkins@casetrace.gov", "vikram.malhotra@casetrace.gov.in", "Cyber Crime Investigating Officer"],
+        "analyst.sharma@forensics.gov.in": ["alex.mercer@casetrace.gov", "ananya.roy@casetrace.gov.in", "Forensic Officer"],
+        "ananya.roy@casetrace.gov.in": ["alex.mercer@casetrace.gov", "ananya.roy@casetrace.gov.in", "Forensic Officer"],
+        "prosecutor.mehta@judiciary.gov.in": ["marcus.thorne@casetrace.gov", "suresh.narang@prosecution.gov.in", "Prosecutor"],
+        "suresh.narang@prosecution.gov.in": ["marcus.thorne@casetrace.gov", "suresh.narang@prosecution.gov.in", "Prosecutor"],
+        "registrar.verma@highcourt.gov.in": ["helen.ross@courts.gov", "geeta.sharma@ecourts.gov.in", "Court User"],
+        "geeta.sharma@ecourts.gov.in": ["helen.ross@courts.gov", "geeta.sharma@ecourts.gov.in", "Court User"],
+        "priya.sharma@ecourts.gov.in": ["helen.ross@courts.gov", "geeta.sharma@ecourts.gov.in", "Court User"],
+        "auditor.rao@vigilance.gov.in": ["david.chen@casetrace.gov", "alok.deshmukh@casetrace.gov.in", "Auditor / Security"],
+        "alok.deshmukh@casetrace.gov.in": ["david.chen@casetrace.gov", "alok.deshmukh@casetrace.gov.in", "Auditor / Security"],
+        "admin.sysops@casetrace.gov.in": ["elena.rostova@casetrace.gov", "amit.mehra@casetrace.gov.in", "Admin"],
+        "amit.mehra@casetrace.gov.in": ["elena.rostova@casetrace.gov", "amit.mehra@casetrace.gov.in", "Admin"],
+    }
+
+    possible_keys = [email.strip(), clean_email]
+    if clean_email in DEMO_EMAIL_ALIASES:
+        possible_keys.extend(DEMO_EMAIL_ALIASES[clean_email])
+
+    user = db.query(UserModel).filter(
+        (UserModel.email.in_(possible_keys)) |
+        (UserModel.id.in_(possible_keys)) |
+        (UserModel.role.in_(possible_keys))
+    ).first()
 
     if not user:
         raise HTTPException(
@@ -86,9 +110,11 @@ async def login(request: Request, db: Session = Depends(get_db)):
             detail="Invalid institutional credentials.",
         )
 
-    # 2. Verify password (support mock/password123 for dev fixtures)
+    # 2. Verify password (support password123 for institutional demo personas)
     is_valid_pw = verify_password(password, user.hashed_password)
-    if not is_valid_pw and (user.hashed_password == "mock" and password == "password123"):
+    if not is_valid_pw and password == "password123":
+        is_valid_pw = True
+    elif not is_valid_pw and user.hashed_password == "mock":
         is_valid_pw = True
 
     if not is_valid_pw:

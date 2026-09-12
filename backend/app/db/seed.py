@@ -68,6 +68,29 @@ def seed_database(db=None):
                 )
             ]
             db.add_all(users)
+            db.commit()
+
+        # Seed Indian Personas matching the Frontend Preset Dropdown
+        indian_personas = [
+            ("usr-ind-001", "Shri R. K. Verma", "rk.verma@casetrace.gov.in", "Senior Officer", "Central Investigation Bureau", "Senior Investigating Officer", "RV"),
+            ("usr-ind-002", "Insp. Rajesh Kumar", "rajesh.kumar@casetrace.gov.in", "Investigating Officer", "Crime Branch Investigation", "Investigating Officer", "RK"),
+            ("usr-ind-003", "Insp. Vikram Malhotra", "vikram.malhotra@casetrace.gov.in", "Cyber Crime Investigating Officer", "Cyber Crime Investigation Cell", "Cyber Crime Investigating Officer", "VM"),
+            ("usr-ind-004", "Dr. Ananya Roy", "ananya.roy@casetrace.gov.in", "Forensic Officer", "Central Digital Forensic Science Laboratory", "Digital Forensics Officer", "AR"),
+            ("usr-ind-005", "Adv. Suresh Narang", "suresh.narang@prosecution.gov.in", "Prosecutor", "Directorate of Public Prosecutions", "Public Prosecutor", "SN"),
+            ("usr-ind-006", "Smt. Geeta Sharma", "geeta.sharma@ecourts.gov.in", "Court User", "Principal District & Sessions Court", "Judicial Officer", "GS"),
+            ("usr-ind-007", "Shri Alok Deshmukh", "alok.deshmukh@casetrace.gov.in", "Auditor / Security", "Internal Oversight & Vigilance", "Security & Audit Officer", "AD"),
+            ("usr-ind-008", "Shri Amit Mehra", "amit.mehra@casetrace.gov.in", "Admin", "National Informatics Directorate", "System Administrator", "AM"),
+            ("usr-ind-009", "Insp. Sarah Jenkins", "officer.jenkins@police.gov.in", "Investigating Officer", "Financial Crimes Division", "Lead Investigator", "SJ"),
+        ]
+        for uid, name, email_addr, role_val, dept, desig, av in indian_personas:
+            if not db.query(UserModel).filter(UserModel.email == email_addr).first():
+                db.add(UserModel(
+                    id=uid, name=name, email=email_addr,
+                    hashed_password=get_password_hash("password123"), role=role_val,
+                    department=dept, designation=desig, avatar=av,
+                    assigned_case_ids=["CASE-2026-8942", "CASE-2026-4410", "CASE-2026-1105"]
+                ))
+        db.commit()
 
         # 2. Seed 3 Demo Cases
         if db.query(CaseModel).count() == 0:

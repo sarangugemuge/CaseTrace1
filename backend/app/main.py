@@ -12,11 +12,10 @@ async def lifespan(app: FastAPI):
     # Initialize DB tables automatically if they don't exist
     Base.metadata.create_all(bind=engine)
     
-    # Seed mock data if DB is empty
+    # Seed database with all personas & cases (idempotent)
     db = SessionLocal()
     try:
-        if db.query(UserModel).count() == 0:
-            seed_database(db)
+        seed_database(db)
     except Exception as e:
         print(f"Startup seed notice: {e}")
     finally:
