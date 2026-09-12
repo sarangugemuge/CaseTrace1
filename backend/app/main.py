@@ -42,6 +42,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Root health check endpoint for cloud platforms (Render, Railway, AWS ALB)
+@app.get("/", tags=["Health"])
+def root():
+    return {
+        "status": "ok",
+        "service": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "docs": "/docs",
+        "health": f"{settings.API_PREFIX}/health"
+    }
+
 # Include Routers
 app.include_router(health.router, prefix=settings.API_PREFIX, tags=["Health"])
 app.include_router(auth.router, prefix=settings.API_PREFIX, tags=["Auth"])
