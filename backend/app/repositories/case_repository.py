@@ -7,7 +7,9 @@ class CaseRepository:
         self.db = db
 
     def get_by_id(self, case_id: str) -> Optional[CaseModel]:
-        return self.db.query(CaseModel).filter(CaseModel.case_id == case_id).first()
+        return self.db.query(CaseModel).filter(
+            (CaseModel.case_id == case_id) | (CaseModel.case_number == case_id)
+        ).first()
 
     def get_by_number(self, case_number: str) -> Optional[CaseModel]:
         return self.db.query(CaseModel).filter(CaseModel.case_number == case_number).first()

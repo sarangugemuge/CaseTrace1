@@ -23,7 +23,9 @@ export const OverviewTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) 
             <span>ASSIGNED PERSONNEL</span>
             <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="text-2xl font-mono font-bold text-slate-900 dark:text-white mt-2">{caseData.assignedUsers.length}</div>
+          <div className="text-2xl font-mono font-bold text-slate-900 dark:text-white mt-2">
+            {caseData.assignedUsers?.length ?? 0}
+          </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Multi-agency clearance active</div>
         </div>
 
@@ -32,7 +34,7 @@ export const OverviewTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) 
             <span>INTEGRITY ANCHOR</span>
             <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           </div>
-          <div className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 mt-2 truncate">{caseData.blockchainAnchorId}</div>
+          <div className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 mt-2 truncate">{caseData.blockchainAnchorId || '(Anchoring)'}</div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Immutable Root Hash Verified</div>
         </div>
       </div>
@@ -52,7 +54,7 @@ export const OverviewTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) 
             </div>
             <div>
               <span className="text-slate-500 dark:text-slate-400 block">INCIDENT DATE:</span>
-              <span className="text-slate-900 dark:text-white">{caseData.incidentDate}</span>
+              <span className="text-slate-900 dark:text-white">{caseData.incidentDate || 'N/A'}</span>
             </div>
             <div>
               <span className="text-slate-500 dark:text-slate-400 block">PRIORITY:</span>
@@ -63,11 +65,15 @@ export const OverviewTab: React.FC<{ caseData: CasePassport }> = ({ caseData }) 
           <div className="space-y-3">
             <div>
               <span className="text-slate-500 dark:text-slate-400 block">IDENTIFIED SUSPECTS:</span>
-              <span className="text-slate-900 dark:text-white font-semibold">{caseData.suspects.join(', ')}</span>
+              <span className="text-slate-900 dark:text-white font-semibold">
+                {caseData.suspects && caseData.suspects.length > 0 ? caseData.suspects.join(', ') : '(None recorded)'}
+              </span>
             </div>
             <div>
               <span className="text-slate-500 dark:text-slate-400 block">PRIMARY VICTIMS / ENTITIES:</span>
-              <span className="text-slate-900 dark:text-white font-semibold">{caseData.victims.join(', ')}</span>
+              <span className="text-slate-900 dark:text-white font-semibold">
+                {caseData.victims && caseData.victims.length > 0 ? caseData.victims.join(', ') : '(None recorded)'}
+              </span>
             </div>
           </div>
         </div>

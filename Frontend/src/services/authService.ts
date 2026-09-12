@@ -20,12 +20,28 @@ export const authService = {
       try {
         const parsed = JSON.parse(stored) as User;
         const found = MOCK_USERS.find(
-          (u) => u.id === parsed.id || u.email === parsed.email || u.role === parsed.role
+          (u) => u.id === parsed.id || u.email?.toLowerCase() === parsed.email?.toLowerCase() || u.role === parsed.role
         );
         if (found) {
-          return found;
+          return {
+            ...found,
+            assignedCaseIds: Array.isArray(found.assignedCaseIds)
+              ? found.assignedCaseIds
+              : Array.isArray((found as any).assigned_case_ids)
+              ? (found as any).assigned_case_ids
+              : [],
+          };
         }
-        if (parsed && parsed.role) return parsed;
+        if (parsed && parsed.role) {
+          return {
+            ...parsed,
+            assignedCaseIds: Array.isArray(parsed.assignedCaseIds)
+              ? parsed.assignedCaseIds
+              : Array.isArray((parsed as any).assigned_case_ids)
+              ? (parsed as any).assigned_case_ids
+              : [],
+          };
+        }
       } catch (e) {
         console.error('Failed to parse stored user:', e);
       }
@@ -81,7 +97,16 @@ export const authService = {
   ): void {
     if (typeof window === 'undefined') return;
 
-    const userJson = JSON.stringify(user);
+    const normalizedUser: User = {
+      ...user,
+      assignedCaseIds: Array.isArray(user.assignedCaseIds)
+        ? user.assignedCaseIds
+        : Array.isArray((user as any).assigned_case_ids)
+        ? (user as any).assigned_case_ids
+        : [],
+    };
+
+    const userJson = JSON.stringify(normalizedUser);
     sessionStorage.setItem(USER_STORAGE_KEY, userJson);
     localStorage.setItem(USER_STORAGE_KEY, userJson);
 

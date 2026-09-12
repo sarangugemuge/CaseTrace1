@@ -23,14 +23,17 @@ export const riskEngine = {
     const reasons: string[] = [];
 
     // 1. Case assignment check
+    const userCaseIds = user?.assignedCaseIds || (user as any)?.assigned_case_ids || [];
+    const caseUsers = caseData?.assignedUsers || (caseData as any)?.assigned_users || [];
     const isAssigned =
-      user.assignedCaseIds.includes(caseData.caseId) ||
-      caseData.assignedUsers.includes(user.id);
+      userCaseIds.includes(caseData.caseId) ||
+      (caseData.caseNumber && userCaseIds.includes(caseData.caseNumber)) ||
+      caseUsers.includes(user.id);
 
     if (!isAssigned) {
       if (user.role !== 'Senior Officer' && user.role !== 'Auditor / Security' && user.role !== 'Admin') {
         score += 45;
-        reasons.push(`User is accessing unassigned case (${caseData.caseId})`);
+        reasons.push(`User is accessing unassigned case (${caseData.caseNumber || caseData.caseId})`);
       }
     }
 

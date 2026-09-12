@@ -6,27 +6,60 @@ import { MOCK_DOCUMENTS } from '../mock/documents';
 import { authService } from './authService';
 import { auditService } from './auditService';
 
+const LOCAL_CASES_KEY = 'casetrace_custom_cases';
+
+function getStoredCases(): CasePassport[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_CASES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredCases(cases: CasePassport[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_CASES_KEY, JSON.stringify(cases));
+  } catch {}
+}
+
 export const caseService = {
   getAllCases(): CasePassport[] {
-    return MOCK_CASES;
+    const stored = getStoredCases();
+    const map = new Map<string, CasePassport>();
+    for (const c of MOCK_CASES) {
+      map.set(c.caseId, c);
+    }
+    for (const c of stored) {
+      map.set(c.caseId, c);
+    }
+    return Array.from(map.values());
   },
 
   getCaseById(id: string): CasePassport | undefined {
-    return MOCK_CASES.find((c) => c.caseId === id || c.caseNumber === id);
+    const all = this.getAllCases();
+    return all.find((c) => c.caseId === id || c.caseNumber === id);
   },
 
   getCasesForUser(user: User): CasePassport[] {
+    const all = this.getAllCases();
     // Senior Officer, Auditor, Admin can see all cases
     if (
       user.role === 'Senior Officer' ||
       user.role === 'Auditor / Security' ||
       user.role === 'Admin'
     ) {
-      return MOCK_CASES;
+      return all;
     }
     // Others only see cases assigned to them or where their ID is in assignedUsers
-    return MOCK_CASES.filter(
-      (c) => user.assignedCaseIds.includes(c.caseId) || c.assignedUsers.includes(user.id)
+    const userCaseIds = user?.assignedCaseIds || (user as any)?.assigned_case_ids || [];
+    return all.filter(
+      (c) =>
+        userCaseIds.includes(c.caseId) ||
+        userCaseIds.includes(c.caseNumber) ||
+        (c.assignedUsers && c.assignedUsers.includes(user.id))
     );
   },
 
@@ -49,15 +82,20 @@ export const caseService = {
     if (!currentUser) {
       throw new Error('Authentication required to create cases.');
     }
-    if (currentUser.role !== 'Senior Officer' && currentUser.role !== 'Admin') {
-      throw new Error('Only Senior Officers and Admins are authorized to create new cases.');
+    if (
+      currentUser.role !== 'Senior Officer' &&
+      currentUser.role !== 'Investigating Officer' &&
+      currentUser.role !== 'Admin'
+    ) {
+      throw new Error('Only Senior Officers, Investigating Officers, and Admins are authorized to create new cases.');
     }
 
     const caseNumber = (caseData.caseNumber || '').trim();
     if (!caseNumber) {
       throw new Error('Case number cannot be empty.');
     }
-    const existing = MOCK_CASES.find((c) => c.caseNumber.toLowerCase() === caseNumber.toLowerCase());
+    const all = this.getAllCases();
+    const existing = all.find((c) => c.caseNumber.toLowerCase() === caseNumber.toLowerCase());
     if (existing) {
       throw new Error(`Case with number '${caseNumber}' already exists.`);
     }
@@ -87,6 +125,8 @@ export const caseService = {
     };
 
     MOCK_CASES.unshift(newCase);
+    const stored = getStoredCases();
+    saveStoredCases([newCase, ...stored.filter((c) => c.caseId !== newCase.caseId)]);
 
     auditService.logEvent(currentUser, 'CASE_CREATED', {
       caseId: newCase.caseId,

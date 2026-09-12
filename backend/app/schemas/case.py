@@ -24,14 +24,21 @@ class CaseBase(BaseModel):
     classification: str
     department: str
     lead_investigator: str
-    assigned_users: List[str] = []
+    assigned_users: Optional[List[str]] = []
     incident_date: str
     case_stage: str
-    victims: List[str] = []
-    suspects: List[str] = []
+    victims: Optional[List[str]] = []
+    suspects: Optional[List[str]] = []
     evidence_count: int = 0
     document_count: int = 0
     blockchain_anchor_id: str
+
+    @field_validator("assigned_users", "victims", "suspects", mode="before")
+    @classmethod
+    def ensure_list(cls, v):
+        if v is None:
+            return []
+        return v
 
 class CaseCreate(BaseModel):
     case_id: Optional[str] = None

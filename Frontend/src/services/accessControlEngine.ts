@@ -26,9 +26,12 @@ export const accessControlEngine = {
     }
 
     // 2. Case Assignment Check
+    const userCaseIds = user?.assignedCaseIds || (user as any)?.assigned_case_ids || [];
+    const caseUsers = caseData?.assignedUsers || (caseData as any)?.assigned_users || [];
     const isAssigned =
-      user.assignedCaseIds.includes(caseData.caseId) ||
-      caseData.assignedUsers.includes(user.id);
+      userCaseIds.includes(caseData.caseId) ||
+      (caseData.caseNumber && userCaseIds.includes(caseData.caseNumber)) ||
+      caseUsers.includes(user.id);
 
     const isCrossDeptAuthorized =
       user.role === 'Senior Officer' || user.role === 'Auditor / Security';
@@ -36,7 +39,7 @@ export const accessControlEngine = {
     if (!isAssigned && !isCrossDeptAuthorized) {
       return {
         allowed: false,
-        reason: `User is not assigned to ${caseData.caseId}. Access denied.`,
+        reason: `User is not assigned to ${caseData.caseNumber || caseData.caseId}. Access denied.`,
         riskLevel: 'HIGH',
         requiresPurpose: false,
         policyId: 'POL-CASE-ASSIGNMENT-01',
@@ -58,7 +61,7 @@ export const accessControlEngine = {
     const role = user.role;
     const sensitivity = document.sensitivity;
 
-    const allowedSensitivities: Record<Role, SensitivityLevel[]> = {
+    const allowedSensitivities: Record<string, SensitivityLevel[]> = {
       'Senior Officer': ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'TOP_SECRET', 'FORENSIC'],
       'Investigating Officer': ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL'],
       'Cyber Crime Investigating Officer': ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL'],
@@ -69,7 +72,8 @@ export const accessControlEngine = {
       'Admin': ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'TOP_SECRET', 'FORENSIC'],
     };
 
-    if (!allowedSensitivities[role].includes(sensitivity)) {
+    const roleAllowed = allowedSensitivities[role] || ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL'];
+    if (!roleAllowed.includes(sensitivity)) {
       return {
         allowed: false,
         reason: `Role '${role}' is not authorized to access '${sensitivity}' level documents.`,

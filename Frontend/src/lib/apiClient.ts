@@ -52,25 +52,50 @@ function transformDocument(raw: any): Document {
   };
 }
 
-function transformCase(raw: any): CasePassport {
+function transformUser(raw: any): User {
   if (!raw) return raw;
   return {
-    caseId: raw.caseId || raw.case_id || '',
-    caseNumber: raw.caseNumber || raw.case_number || '',
-    title: raw.title || '',
+    id: raw.id || 'usr-default',
+    name: raw.name || 'Authorized Officer',
+    email: raw.email || '',
+    role: raw.role || 'Investigating Officer',
+    department: raw.department || 'Law Enforcement',
+    designation: raw.designation || 'Officer',
+    avatar: raw.avatar || 'CT',
+    assignedCaseIds: Array.isArray(raw.assignedCaseIds)
+      ? raw.assignedCaseIds
+      : Array.isArray(raw.assigned_case_ids)
+      ? raw.assigned_case_ids
+      : [],
+    status: raw.status || 'ACTIVE',
+  };
+}
+
+function transformCase(raw: any): CasePassport {
+  if (!raw) return raw;
+  const caseId = raw.caseId || raw.case_id || raw.caseNumber || raw.case_number || '';
+  const caseNumber = raw.caseNumber || raw.case_number || caseId;
+  return {
+    caseId,
+    caseNumber,
+    title: raw.title || caseNumber || 'Untitled Case',
     description: raw.description || '',
     status: raw.status || 'ACTIVE',
     priority: raw.priority || 'HIGH',
     classification: raw.classification || 'CONFIDENTIAL',
-    department: raw.department || '',
-    leadInvestigator: raw.leadInvestigator || raw.lead_investigator || '',
-    assignedUsers: raw.assignedUsers || raw.assigned_users || [],
+    department: raw.department || 'Investigation',
+    leadInvestigator: raw.leadInvestigator || raw.lead_investigator || 'Unassigned',
+    assignedUsers: Array.isArray(raw.assignedUsers)
+      ? raw.assignedUsers
+      : Array.isArray(raw.assigned_users)
+      ? raw.assigned_users
+      : [],
     createdAt: raw.createdAt || (raw.created_at ? new Date(raw.created_at).toISOString() : new Date().toISOString()),
     updatedAt: raw.updatedAt || (raw.updated_at ? new Date(raw.updated_at).toISOString() : new Date().toISOString()),
     incidentDate: raw.incidentDate || raw.incident_date || '',
     caseStage: raw.caseStage || raw.case_stage || 'FORENSIC_ANALYSIS',
-    victims: raw.victims || [],
-    suspects: raw.suspects || [],
+    victims: Array.isArray(raw.victims) ? raw.victims : [],
+    suspects: Array.isArray(raw.suspects) ? raw.suspects : [],
     evidenceCount: raw.evidenceCount ?? raw.evidence_count ?? 0,
     documentCount: raw.documentCount ?? raw.document_count ?? 0,
     blockchainAnchorId: raw.blockchainAnchorId || raw.blockchain_anchor_id || '',
@@ -219,13 +244,14 @@ export const apiClient = {
       clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
+        const userObj = transformUser(data.user);
         authService.saveSession(
-          data.user,
+          userObj,
           data.access_token,
           data.refresh_token,
           data.expires_in || 600
         );
-        const mappedUser = authService.getCurrentUser() || data.user;
+        const mappedUser = authService.getCurrentUser() || userObj;
         return {
           user: mappedUser,
           accessToken: data.access_token,
