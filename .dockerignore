@@ -1,0 +1,13 @@
+.git
+.venv
+venv
+Frontend
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+casetrace.db
+test_casetrace.db
+backend/casetrace.db
+backend/test_casetrace.db
+backend/storage_data/

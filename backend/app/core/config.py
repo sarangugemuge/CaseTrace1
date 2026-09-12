@@ -37,7 +37,11 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_HOURS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_HOURS", "8"))
     SENSITIVE_OP_MAX_AGE_MINUTES: int = int(os.getenv("SENSITIVE_OP_MAX_AGE_MINUTES", "15"))
     
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: List[str] = [
+        o.strip()
+        for o in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+        if o.strip()
+    ]
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
