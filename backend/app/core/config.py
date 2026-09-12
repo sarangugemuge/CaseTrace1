@@ -1,6 +1,8 @@
 import os
+import json
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List
+from pydantic import field_validator
+from typing import List, Union
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "CASETRACE API"
@@ -37,11 +39,24 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_HOURS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_HOURS", "8"))
     SENSITIVE_OP_MAX_AGE_MINUTES: int = int(os.getenv("SENSITIVE_OP_MAX_AGE_MINUTES", "15"))
     
-    CORS_ORIGINS: List[str] = [
-        o.strip()
-        for o in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
-        if o.strip()
-    ]
+    CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v):
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            trimmed = v.strip()
+            if trimmed.startswith("[") and trimmed.endswith("]"):
+                try:
+                    parsed = json.loads(trimmed)
+                    if isinstance(parsed, list):
+                        return [str(x).strip() for x in parsed if str(x).strip()]
+                except Exception:
+                    pass
+            return [x.strip() for x in trimmed.split(",") if x.strip()]
+        return []
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
